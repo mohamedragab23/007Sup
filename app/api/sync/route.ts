@@ -40,9 +40,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: result.success,
-      message: 'تمت المزامنة بنجاح',
       ...result,
+      message: 'تمت المزامنة بنجاح',
     });
   } catch (error: any) {
     console.error('Sync error:', error);
