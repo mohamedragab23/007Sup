@@ -2,7 +2,6 @@
 
 import Layout from '@/components/Layout';
 import { useQuery } from '@tanstack/react-query';
-import ExcelUpload from '@/components/ExcelUpload';
 import { TableSkeleton } from '@/components/SkeletonLoader';
 
 export default function AdminDebtsPage() {
@@ -52,8 +51,6 @@ export default function AdminDebtsPage() {
             <span className="text-2xl font-bold text-blue-900">{totalDebts.toFixed(2)} ج.م</span>
           </div>
         </div>
-
-        <ExcelUpload type="debts" />
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
