@@ -217,7 +217,7 @@ export default function AdminSupervisorsPage() {
                             {supervisor.salaryType === 'fixed' && 'راتب ثابت'}
                             {supervisor.salaryType === 'commission_type1' && 'عمولة نوع 1'}
                             {supervisor.salaryType === 'commission_type2' && 'عمولة نوع 2'}
-                            {!supervisor.salaryType || supervisor.salaryType === '' ? 'غير محدد' : supervisor.salaryType}
+                            {!supervisor.salaryType && 'غير محدد'}
                           </span>
                           {supervisor.salaryType === 'fixed' && supervisor.salaryAmount && (
                             <div className="text-xs text-gray-500">
