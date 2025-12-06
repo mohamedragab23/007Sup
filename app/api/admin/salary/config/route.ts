@@ -48,9 +48,10 @@ export async function POST(request: NextRequest) {
       await ensureSheetExists('إعدادات_الرواتب', headers);
       
       // Get existing configs
-      let configData = [];
+      let configData: any[][] = [];
       try {
-        configData = await getSheetData('إعدادات_الرواتب', false);
+        const sheetData = await getSheetData('إعدادات_الرواتب', false);
+        configData = Array.isArray(sheetData) ? (sheetData as any[][]) : [];
       } catch (error) {
         console.error('Error getting salary config data:', error);
         configData = [];
@@ -150,9 +151,10 @@ export async function GET(request: NextRequest) {
 
     if (supervisorId) {
       // Get specific supervisor config from إعدادات_الرواتب sheet
-      let configData = [];
+      let configData: any[][] = [];
       try {
-        configData = await getSheetData('إعدادات_الرواتب', false);
+        const sheetData = await getSheetData('إعدادات_الرواتب', false);
+        configData = Array.isArray(sheetData) ? (sheetData as any[][]) : [];
       } catch (error) {
         // Sheet doesn't exist, return default
         return NextResponse.json({
@@ -218,7 +220,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
       }
 
-      const configs = [];
+      const configs: any[] = [];
       for (let i = 1; i < supervisorsData.length; i++) {
         const row = supervisorsData[i];
         if (!row[0]) continue;
