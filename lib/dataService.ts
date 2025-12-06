@@ -561,7 +561,7 @@ export async function getPerformanceData(
   );
 
   // Check cache first (2 minutes cache for better performance)
-    const cached = cache.get<{ success: boolean; labels: string[]; orders: number[]; hours: number[] }>(cacheKey);
+    const cached = cache.get<{ success: boolean; labels: string[]; orders: number[]; hours: number[]; avgAcceptance?: number; totalAbsences?: number; totalBreaks?: number; error?: string }>(cacheKey);
     if (cached) {
       return cached;
     }
@@ -714,6 +714,9 @@ export async function getPerformanceData(
       labels: [],
       orders: [],
       hours: [],
+      avgAcceptance: 0,
+      totalAbsences: 0,
+      totalBreaks: 0,
     };
   }
 }

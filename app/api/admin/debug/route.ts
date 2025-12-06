@@ -9,6 +9,8 @@ import { getSheetData } from '@/lib/googleSheets';
 import { getSupervisorRiders } from '@/lib/dataService';
 import { getSupervisorPerformanceFiltered } from '@/lib/dataFilter';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');

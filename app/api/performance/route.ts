@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { getPerformanceData } from '@/lib/dataService';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -81,10 +83,11 @@ export async function GET(request: NextRequest) {
 
     // Enhanced logging
     if (!performanceResult.success) {
-      console.error(`[Performance API] ❌ Failed for supervisor ${decoded.code}:`, performanceResult.error);
+      const errorMessage = 'error' in performanceResult ? performanceResult.error : 'فشل تحميل البيانات';
+      console.error(`[Performance API] ❌ Failed for supervisor ${decoded.code}:`, errorMessage);
       return NextResponse.json({
         success: false,
-        error: performanceResult.error || 'فشل تحميل البيانات',
+        error: errorMessage,
         data: {
           labels: [],
           orders: [],
@@ -94,7 +97,7 @@ export async function GET(request: NextRequest) {
     }
 
     // getPerformanceData returns { success, labels, orders, hours, avgAcceptance, totalAbsences, totalBreaks }
-    const { success, labels, orders, hours, avgAcceptance, totalAbsences, totalBreaks, ...rest } = performanceResult;
+    const { success, labels, orders, hours, avgAcceptance = 0, totalAbsences = 0, totalBreaks = 0, ...rest } = performanceResult;
     
     // Calculate totals
     const totalHours = (hours || []).reduce((a: number, b: number) => a + b, 0);

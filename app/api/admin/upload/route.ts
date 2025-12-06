@@ -11,6 +11,8 @@ import { processRidersExcel, processPerformanceExcel } from '@/lib/excelProcesso
 import { bulkAddRiders, getAllRiders } from '@/lib/adminService';
 import { appendToSheet } from '@/lib/googleSheets';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     // Get token from header

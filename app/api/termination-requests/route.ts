@@ -9,6 +9,8 @@ import { getSupervisorRiders } from '@/lib/dataService';
 import { appendToSheet, getSheetData, updateSheetRow, ensureSheetExists } from '@/lib/googleSheets';
 import { updateRider } from '@/lib/adminService';
 
+export const dynamic = 'force-dynamic';
+
 // Get all termination requests (admin only) or requests for a supervisor
 export async function GET(request: NextRequest) {
   try {
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status'); // 'pending', 'approved', 'rejected', or null for all
 
     // Get all termination requests from Google Sheets
-    let allRequests = [];
+    let allRequests: any[] = [];
     try {
       const requestsData = await getSheetData('طلبات_الإقالة');
       // Skip header row
@@ -320,8 +322,7 @@ export async function PUT(request: NextRequest) {
           // Remove assignment only - set supervisorCode to empty string
           console.log(`[TerminationRequest] Removing assignment for rider "${riderCode}" only`);
           const result = await updateRider(riderCode.trim(), {
-            supervisorCode: '', // Remove assignment - this should only affect the specific rider
-            supervisorName: '', // Also clear supervisor name
+            supervisorCode: '', // Remove assignment - supervisorName will be cleared automatically
           });
           if (!result.success) {
             console.error(`[TerminationRequest] Failed to remove rider assignment: ${result.error}`);

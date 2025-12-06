@@ -3,6 +3,8 @@ import { verifyToken } from '@/lib/auth';
 import { getSupervisorDebts } from '@/lib/adminService';
 import { getSupervisorDebtsFiltered } from '@/lib/dataFilter';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');

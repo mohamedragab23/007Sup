@@ -8,6 +8,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { getSheetData, updateSheetRow, appendToSheet } from '@/lib/googleSheets';
 import fs from 'fs';
+
+export const dynamic = 'force-dynamic';
 import path from 'path';
 
 // Use الإعدادات sheet which should already exist, or fallback to local file

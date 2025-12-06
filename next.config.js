@@ -14,7 +14,6 @@ const nextConfig = {
   
   // Experimental features for better performance
   experimental: {
-    optimizeCss: true, // Optimize CSS
     optimizePackageImports: ['@tanstack/react-query', 'recharts'], // Tree-shake unused exports
   },
   

@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { syncEngine } from '@/lib/syncEngine';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -38,9 +40,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      success: result.success,
-      message: 'تمت المزامنة بنجاح',
       ...result,
+      message: 'تمت المزامنة بنجاح',
     });
   } catch (error: any) {
     console.error('Sync error:', error);
