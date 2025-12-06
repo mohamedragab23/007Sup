@@ -7,8 +7,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { getPerformanceData } from '@/lib/dataService';
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -96,17 +94,20 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // getPerformanceData returns { success, labels, orders, hours, avgAcceptance, totalAbsences, totalBreaks }
-    const { success, labels, orders, hours, avgAcceptance = 0, totalAbsences = 0, totalBreaks = 0, ...rest } = performanceResult;
+    // getPerformanceData returns { success, labels, orders, hours, avgAcceptance?, totalAbsences?, totalBreaks? }
+    const { success, labels, orders, hours } = performanceResult;
+    const avgAcceptance = 'avgAcceptance' in performanceResult ? performanceResult.avgAcceptance : 0;
+    const totalAbsences = 'totalAbsences' in performanceResult ? performanceResult.totalAbsences : 0;
+    const totalBreaks = 'totalBreaks' in performanceResult ? performanceResult.totalBreaks : 0;
     
     // Calculate totals
     const totalHours = (hours || []).reduce((a: number, b: number) => a + b, 0);
     const totalOrders = (orders || []).reduce((a: number, b: number) => a + b, 0);
     
     // Find best performance day
-    const ordersArray = orders || [];
-    const maxOrders = Math.max(...ordersArray, 0);
-    const bestDayIndex = ordersArray.indexOf(maxOrders);
+    const ordersArray: number[] = Array.isArray(orders) ? orders : [];
+    const maxOrders = ordersArray.length > 0 ? Math.max(...ordersArray, 0) : 0;
+    const bestDayIndex = ordersArray.length > 0 ? ordersArray.indexOf(maxOrders) : -1;
     const bestDay = bestDayIndex >= 0 && labels?.[bestDayIndex] ? {
       date: labels[bestDayIndex],
       orders: ordersArray[bestDayIndex],

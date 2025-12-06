@@ -8,8 +8,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { getSheetData, updateSheetRange } from '@/lib/googleSheets';
 
-export const dynamic = 'force-dynamic';
-
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
