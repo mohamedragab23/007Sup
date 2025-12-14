@@ -178,7 +178,7 @@ export async function updateSheetRange(
             spreadsheetId: SPREADSHEET_ID,
           });
           
-          const sheet = spreadsheet.data.sheets?.find((s: any) => s.properties?.title === sheetName);
+          const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === sheetName);
           const sheetId = sheet?.properties?.sheetId;
           
           if (sheetId !== undefined) {

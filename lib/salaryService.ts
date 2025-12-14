@@ -710,7 +710,7 @@ export async function calculateSupervisorSalary(
     // Get daily breakdown for commission-based salary
     const breakdown: Array<{ date: string; orders: number; hours: number; multiplier: number; dailyCommission: number }> = [];
     
-    if (supervisor?.salaryType === 'commission_type1' || supervisor?.salaryType === 'commission_type2') {
+    if (supervisor?.salaryType === 'commission') {
       // Get daily performance data for breakdown
       const { getSupervisorPerformanceFiltered } = await import('./dataFilter');
       const dailyData = await getSupervisorPerformanceFiltered(supervisorCode, startDate, endDate);
