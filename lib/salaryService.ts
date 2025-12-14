@@ -127,7 +127,8 @@ interface DeductionDetail {
 // Get supervisor deductions for a date range with details
 async function getSupervisorDeductionsDetails(supervisorCode: string, startDate: Date, endDate: Date): Promise<{ total: number; items: DeductionDetail[] }> {
   try {
-    const deductionsData = await getSheetData('الخصومات');
+    // Don't use cache for salary calculations to ensure fresh data
+    const deductionsData = await getSheetData('الخصومات', false);
     let totalDeductions = 0;
     const items: DeductionDetail[] = [];
 
@@ -135,9 +136,16 @@ async function getSupervisorDeductionsDetails(supervisorCode: string, startDate:
     const normalizedStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const normalizedEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
+    console.log(`[Salary] Fetching deductions for ${supervisorCode} from ${normalizedStart.toISOString()} to ${normalizedEnd.toISOString()}`);
+    console.log(`[Salary] Deductions data rows: ${deductionsData.length}`);
+
+    // Column structure: A=كود المشرف, B=الشهر, C=سبب الخصم, D=المبلغ
     for (let i = 1; i < deductionsData.length; i++) {
       const row = deductionsData[i];
-      if (!row[0] || row[0].toString().trim() !== supervisorCode) continue;
+      if (!row || !row[0]) continue;
+      
+      const rowSupervisorCode = row[0].toString().trim();
+      if (rowSupervisorCode !== supervisorCode) continue;
       
       // Column structure: [0] supervisorCode, [1] month or date, [2] reason, [3] amount
       let inRange = false;
@@ -164,17 +172,21 @@ async function getSupervisorDeductionsDetails(supervisorCode: string, startDate:
       }
       
       if (inRange) {
+        // Column D (index 3) contains the amount
         const amount = Number(row[3]?.toString() || '0') || 0;
-        totalDeductions += amount;
-        items.push({
-          date: dateStr,
-          reason: row[2]?.toString() || 'خصم',
-          amount,
-        });
+        if (amount > 0) {
+          totalDeductions += amount;
+          items.push({
+            date: dateStr,
+            reason: row[2]?.toString() || 'خصم',
+            amount,
+          });
+          console.log(`[Salary] Found deduction: ${amount} EGP - ${row[2]?.toString() || 'خصم'} (${dateStr})`);
+        }
       }
     }
     
-    console.log(`[Salary] Deductions for ${supervisorCode}: ${totalDeductions} EGP (${items.length} items)`);
+    console.log(`[Salary] Total deductions for ${supervisorCode}: ${totalDeductions} EGP (${items.length} items)`);
     return { total: totalDeductions, items };
   } catch (error) {
     console.error('Error fetching deductions:', error);
@@ -197,16 +209,23 @@ interface AdvanceDetail {
 // Get supervisor advances for a date range with details
 async function getSupervisorAdvancesDetails(supervisorCode: string, startDate: Date, endDate: Date): Promise<{ total: number; items: AdvanceDetail[] }> {
   try {
-    const advancesData = await getSheetData('السلف');
+    // Don't use cache for salary calculations to ensure fresh data
+    const advancesData = await getSheetData('السلف', false);
     let totalAdvances = 0;
     const items: AdvanceDetail[] = [];
 
     const normalizedStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const normalizedEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
+    console.log(`[Salary] Fetching advances for ${supervisorCode} from ${normalizedStart.toISOString()} to ${normalizedEnd.toISOString()}`);
+    console.log(`[Salary] Advances data rows: ${advancesData.length}`);
+
     for (let i = 1; i < advancesData.length; i++) {
       const row = advancesData[i];
-      if (!row[0] || row[0].toString().trim() !== supervisorCode) continue;
+      if (!row || !row[0]) continue;
+      
+      const rowSupervisorCode = row[0].toString().trim();
+      if (rowSupervisorCode !== supervisorCode) continue;
       
       // Column structure: [0] supervisorCode, [1] month or date, [2] amount
       let inRange = false;
@@ -233,13 +252,17 @@ async function getSupervisorAdvancesDetails(supervisorCode: string, startDate: D
       }
       
       if (inRange) {
+        // Column C (index 2) contains the amount
         const amount = Number(row[2]?.toString() || '0') || 0;
-        totalAdvances += amount;
-        items.push({ date: dateStr, amount });
+        if (amount > 0) {
+          totalAdvances += amount;
+          items.push({ date: dateStr, amount });
+          console.log(`[Salary] Found advance: ${amount} EGP (${dateStr})`);
+        }
       }
     }
     
-    console.log(`[Salary] Advances for ${supervisorCode}: ${totalAdvances} EGP (${items.length} items)`);
+    console.log(`[Salary] Total advances for ${supervisorCode}: ${totalAdvances} EGP (${items.length} items)`);
     return { total: totalAdvances, items };
   } catch (error) {
     console.error('Error fetching advances:', error);
@@ -256,47 +279,54 @@ async function getSupervisorAdvances(supervisorCode: string, startDate: Date, en
 // Get security inquiries cost for a date range
 async function getSecurityInquiriesCost(supervisorCode: string, startDate: Date, endDate: Date) {
   try {
-    const securityData = await getSheetData('استعلام أمني');
+    // Don't use cache for salary calculations to ensure fresh data
+    const securityData = await getSheetData('استعلام أمني', false);
     let inquiryCount = 0;
 
     // Parse dates for comparison
     const normalizedStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const normalizedEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
+    console.log(`[Salary] Fetching security inquiries for ${supervisorCode} from ${normalizedStart.toISOString()} to ${normalizedEnd.toISOString()}`);
+    console.log(`[Salary] Security data rows: ${securityData.length}`);
+
+    // Column structure: A=التاريخ, B=كود المشرف, C=المكتب, D=اسم المندوب, E=الهاتف, F=الرقم القومي, G=اسم المشرف
     for (let i = 1; i < securityData.length; i++) {
       const row = securityData[i];
       let foundSupervisor = false;
       
-      // Check if supervisor code is in any column
-      for (let j = 0; j < row.length; j++) {
-        if (row[j] && row[j].toString().trim() === supervisorCode) {
-          foundSupervisor = true;
-          break;
-        }
-      }
+      // Column B (index 1) contains supervisor code
+      if (!row || !row[1]) continue;
       
-      if (!foundSupervisor) continue;
+      const rowSupervisorCode = row[1].toString().trim();
+      if (rowSupervisorCode !== supervisorCode) continue;
       
-      // Check date if available (column 0 is usually the date)
+      // Check date if available (Column A - index 0)
+      let inRange = false;
       if (row[0]) {
         const inquiryDate = parseDateForSalary(row[0]);
         if (inquiryDate) {
           const normalizedInquiryDate = new Date(inquiryDate.getFullYear(), inquiryDate.getMonth(), inquiryDate.getDate());
-          if (normalizedInquiryDate >= normalizedStart && normalizedInquiryDate <= normalizedEnd) {
-            inquiryCount++;
-          }
+          inRange = normalizedInquiryDate >= normalizedStart && normalizedInquiryDate <= normalizedEnd;
         } else {
           // If date parsing fails, include it (backward compatibility)
-          inquiryCount++;
+          inRange = true;
         }
       } else {
         // If no date, include it (backward compatibility)
+        inRange = true;
+      }
+      
+      if (inRange) {
         inquiryCount++;
       }
     }
 
     const cost = inquiryCount * 100;
     console.log(`[Salary] Security inquiries for ${supervisorCode}: ${inquiryCount} inquiries = ${cost} EGP`);
+    if (inquiryCount > 0) {
+      console.log(`[Salary] Security inquiry details: Found ${inquiryCount} inquiries in date range`);
+    }
     return cost;
   } catch (error) {
     console.error('Error fetching security inquiries cost:', error);
@@ -357,8 +387,9 @@ async function getEquipmentCost(supervisorCode: string, startDate: Date, endDate
 // Get equipment cost with detailed breakdown
 async function getEquipmentCostDetails(supervisorCode: string, startDate: Date, endDate: Date): Promise<EquipmentDetails> {
   try {
+    // Don't use cache for salary calculations to ensure fresh data
     const [equipmentData, pricing] = await Promise.all([
-      getSheetData('المعدات'),
+      getSheetData('المعدات', false),
       getEquipmentPricing(),
     ]);
 
@@ -366,16 +397,23 @@ async function getEquipmentCostDetails(supervisorCode: string, startDate: Date, 
     const normalizedStart = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
     const normalizedEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
+    console.log(`[Salary] Fetching equipment for ${supervisorCode} from ${normalizedStart.toISOString()} to ${normalizedEnd.toISOString()}`);
+    console.log(`[Salary] Equipment data rows: ${equipmentData.length}`);
+    console.log(`[Salary] Equipment pricing:`, pricing);
+
     let totalMotorcycleBoxes = 0;
     let totalBicycleBoxes = 0;
     let totalTshirts = 0;
     let totalJackets = 0;
     let totalHelmets = 0;
 
-    // Column structure: [0] كود المشرف, [1] الشهر, [2] صناديق نارية, [3] صناديق هوائية, [4] تيشرتات, [5] جواكيت, [6] خوذ
+    // Column structure: A=كود المشرف, B=الشهر, C=عدد الصناديق دراجة نارية, D=عدد الصناديق دراجة هوائية, E=عدد التيشرتات, F=عدد الجواكيت, G=عدد الخوذ
     for (let i = 1; i < equipmentData.length; i++) {
       const row = equipmentData[i];
-      if (!row[0] || row[0].toString().trim() !== supervisorCode) continue;
+      if (!row || !row[0]) continue;
+      
+      const rowSupervisorCode = row[0].toString().trim();
+      if (rowSupervisorCode !== supervisorCode) continue;
       
       // Check if equipment is in date range (Column B - الشهر)
       let inRange = false;
@@ -394,14 +432,27 @@ async function getEquipmentCostDetails(supervisorCode: string, startDate: Date, 
             inRange = (monthStart <= normalizedEnd && monthEnd >= normalizedStart);
           }
         }
+      } else {
+        // If no date specified, include it (backward compatibility)
+        inRange = true;
       }
       
       if (inRange) {
-        totalMotorcycleBoxes += parseInt(row[2]?.toString() || '0') || 0;
-        totalBicycleBoxes += parseInt(row[3]?.toString() || '0') || 0;
-        totalTshirts += parseInt(row[4]?.toString() || '0') || 0;
-        totalJackets += parseInt(row[5]?.toString() || '0') || 0;
-        totalHelmets += parseInt(row[6]?.toString() || '0') || 0;
+        const motorcycleBoxes = parseInt(row[2]?.toString() || '0') || 0;
+        const bicycleBoxes = parseInt(row[3]?.toString() || '0') || 0;
+        const tshirts = parseInt(row[4]?.toString() || '0') || 0;
+        const jackets = parseInt(row[5]?.toString() || '0') || 0;
+        const helmets = parseInt(row[6]?.toString() || '0') || 0;
+        
+        totalMotorcycleBoxes += motorcycleBoxes;
+        totalBicycleBoxes += bicycleBoxes;
+        totalTshirts += tshirts;
+        totalJackets += jackets;
+        totalHelmets += helmets;
+        
+        if (motorcycleBoxes > 0 || bicycleBoxes > 0 || tshirts > 0 || jackets > 0 || helmets > 0) {
+          console.log(`[Salary] Found equipment: ${row[1]?.toString() || 'no date'} - Motorcycle: ${motorcycleBoxes}, Bicycle: ${bicycleBoxes}, Tshirts: ${tshirts}, Jackets: ${jackets}, Helmets: ${helmets}`);
+        }
       }
     }
 
@@ -456,6 +507,7 @@ async function getEquipmentCostDetails(supervisorCode: string, startDate: Date, 
     const totalCost = items.reduce((sum, item) => sum + item.total, 0);
     
     console.log(`[Salary] Equipment cost for ${supervisorCode}: ${totalCost} EGP (${items.length} item types)`);
+    console.log(`[Salary] Equipment breakdown:`, items);
     
     return { totalCost, items };
   } catch (error) {
@@ -710,7 +762,7 @@ export async function calculateSupervisorSalary(
     // Get daily breakdown for commission-based salary
     const breakdown: Array<{ date: string; orders: number; hours: number; multiplier: number; dailyCommission: number }> = [];
     
-    if (supervisor?.salaryType === 'commission') {
+    if (salaryConfig.method !== 'fixed') {
       // Get daily performance data for breakdown
       const { getSupervisorPerformanceFiltered } = await import('./dataFilter');
       const dailyData = await getSupervisorPerformanceFiltered(supervisorCode, startDate, endDate);
