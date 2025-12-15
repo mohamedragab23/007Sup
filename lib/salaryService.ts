@@ -784,7 +784,7 @@ export async function calculateSupervisorSalary(
         const dateStr = currentDate.toISOString().split('T')[0];
         const dayData = dataByDate.get(dateStr) || { orders: 0, hours: 0 };
         const dailyMultiplier = 1; // Default multiplier
-        const commissionRate = supervisor.salaryAmount || 0;
+        const commissionRate = supervisor?.salaryAmount || salaryConfig.commissionRate || 0;
         const dailyCommission = (dayData.orders * dayData.hours) * commissionRate;
 
         breakdown.push({

@@ -323,7 +323,6 @@ export async function PUT(request: NextRequest) {
           console.log(`[TerminationRequest] Removing assignment for rider "${riderCode}" only`);
           const result = await updateRider(riderCode.trim(), {
             supervisorCode: '', // Remove assignment - this should only affect the specific rider
-            supervisorName: '', // Also clear supervisor name
           });
           if (!result.success) {
             console.error(`[TerminationRequest] Failed to remove rider assignment: ${result.error}`);
