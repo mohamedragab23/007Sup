@@ -52,6 +52,7 @@ export default function Layout({ children }: LayoutProps) {
         { href: '/admin/supervisors', label: 'إدارة المشرفين', icon: '👔' },
         { href: '/admin/riders', label: 'إدارة المناديب', icon: '👥' },
         { href: '/admin/termination-requests', label: 'طلبات الإقالة', icon: '🚫' },
+        { href: '/admin/assignment-requests', label: 'طلبات التعيين', icon: '➕' },
         { href: '/admin/performance', label: 'رفع بيانات الأداء', icon: '📈' },
         { href: '/admin/salary-config', label: 'إعدادات الرواتب', icon: '⚙️' },
         { href: '/admin/equipment-pricing', label: 'أسعار المعدات', icon: '🛠️' },

@@ -49,6 +49,34 @@ export default function AdminDashboardPage() {
     refetchOnWindowFocus: false,
   });
 
+  const { data: assignmentRequestsData } = useQuery({
+    queryKey: ['assignment-requests', 'pending'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/assignment-requests?status=pending', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      return data.success ? data.data : [];
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes - refresh more often for requests
+    gcTime: 10 * 60 * 1000,
+  });
+
+  const { data: terminationRequestsData } = useQuery({
+    queryKey: ['termination-requests', 'pending'],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/termination-requests?status=pending', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      return data.success ? data.data : [];
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000,
+  });
+
   useEffect(() => {
     if (supervisorsData && ridersData) {
       const activeRiders = ridersData.filter((r: any) => r.status === 'نشط' || !r.status).length;
@@ -101,6 +129,51 @@ export default function AdminDashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Pending Requests Alerts */}
+        {(assignmentRequestsData?.length > 0 || terminationRequestsData?.length > 0) && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+            <h3 className="text-lg font-semibold text-yellow-800 mb-3">⚠️ طلبات تحتاج إلى مراجعة</h3>
+            <div className="space-y-2">
+              {assignmentRequestsData && assignmentRequestsData.length > 0 && (
+                <a
+                  href="/admin/assignment-requests"
+                  className="block p-3 bg-white hover:bg-yellow-100 rounded-lg transition-colors border border-yellow-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-yellow-800">طلبات التعيين</div>
+                      <div className="text-sm text-yellow-600">
+                        {assignmentRequestsData.length} طلب قيد الانتظار
+                      </div>
+                    </div>
+                    <div className="bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                      {assignmentRequestsData.length}
+                    </div>
+                  </div>
+                </a>
+              )}
+              {terminationRequestsData && terminationRequestsData.length > 0 && (
+                <a
+                  href="/admin/termination-requests"
+                  className="block p-3 bg-white hover:bg-yellow-100 rounded-lg transition-colors border border-yellow-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-semibold text-yellow-800">طلبات الإقالة</div>
+                      <div className="text-sm text-yellow-600">
+                        {terminationRequestsData.length} طلب قيد الانتظار
+                      </div>
+                    </div>
+                    <div className="bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold">
+                      {terminationRequestsData.length}
+                    </div>
+                  </div>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
