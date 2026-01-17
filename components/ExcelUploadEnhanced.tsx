@@ -245,13 +245,14 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
           ? `تم رفع ${totalProcessed} صف بنجاح${totalChunks > 1 ? ` (${totalChunks} دفعة)` : ''}`
           : 'تم معالجة الملف',
         rows: totalProcessed,
+        added: totalProcessed, // For compatibility
+        failed: 0,
         warnings: allWarnings,
+        errors: [] as string[],
       };
 
-      // Use the last chunk's response structure for compatibility
-      let data = response;
-
-      // Data already processed in chunks above
+      // Use the response structure
+      const data = response;
 
       setUploadProgress(100); // Complete
 
