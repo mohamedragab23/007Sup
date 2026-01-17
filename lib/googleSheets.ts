@@ -80,15 +80,10 @@ export async function appendToSheet(sheetName: string, values: any[][], useCache
     // This avoids calculating row numbers and prevents exceeding grid limits
     const BATCH_SIZE = 100;
     
-    // Determine the number of columns needed (use the max columns from all rows)
-    const maxColumns = values.length > 0 ? Math.max(...values.map(row => row.length)) : 0;
-    
-    console.log(`[GoogleSheets] Appending ${values.length} rows to ${sheetName}, max columns: ${maxColumns}`);
-    
     if (values.length <= BATCH_SIZE) {
       // Small dataset - single append
       // Use A1 as range - Google Sheets will automatically find the last row
-      const response = await sheets.spreadsheets.values.append({
+      await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${sheetName}!A1`, // Use A1 - Google Sheets will find the last row automatically
         valueInputOption: 'USER_ENTERED',
@@ -98,13 +93,13 @@ export async function appendToSheet(sheetName: string, values: any[][], useCache
         },
       });
       
-      console.log(`[GoogleSheets] Successfully appended ${values.length} rows to ${sheetName}`);
-      console.log(`[GoogleSheets] Response: Updated range: ${response.data.updates?.updatedRange || 'N/A'}, Updated rows: ${response.data.updates?.updatedRows || 'N/A'}`);
+      console.log(`[GoogleSheets] Appended ${values.length} rows to ${sheetName}`);
     } else {
       // Large dataset - batch processing
+      const totalBatches = Math.ceil(values.length / BATCH_SIZE);
       for (let i = 0; i < values.length; i += BATCH_SIZE) {
         const chunk = values.slice(i, i + BATCH_SIZE);
-        const response = await sheets.spreadsheets.values.append({
+        await sheets.spreadsheets.values.append({
           spreadsheetId: SPREADSHEET_ID,
           range: `${sheetName}!A1`,
           valueInputOption: 'USER_ENTERED',
@@ -113,14 +108,16 @@ export async function appendToSheet(sheetName: string, values: any[][], useCache
             values: chunk,
           },
         });
-        console.log(`[GoogleSheets] Successfully appended batch ${Math.floor(i / BATCH_SIZE) + 1} (${chunk.length} rows) to ${sheetName}`);
-        console.log(`[GoogleSheets] Response: Updated range: ${response.data.updates?.updatedRange || 'N/A'}`);
+        // Log progress for large batches
+        if (totalBatches > 5 && (i / BATCH_SIZE) % 5 === 0) {
+          console.log(`[GoogleSheets] Progress: ${Math.floor(i / BATCH_SIZE) + 1}/${totalBatches} batches (${i + chunk.length}/${values.length} rows)`);
+        }
       }
+      console.log(`[GoogleSheets] Appended ${values.length} rows to ${sheetName} in ${totalBatches} batches`);
     }
 
     // Clear cache after successful write
     cache.clear(CACHE_KEYS.sheetData(sheetName));
-    console.log(`[GoogleSheets] Cache cleared for ${sheetName}`);
 
     return true;
   } catch (error: any) {

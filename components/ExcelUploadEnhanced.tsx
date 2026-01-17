@@ -17,12 +17,7 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
   const [result, setResult] = useState<any>(null);
   const [preview, setPreview] = useState<any>(null);
 
-  // Debug: Log performanceDate when it changes
-  useEffect(() => {
-    if (type === 'performance') {
-      console.log('[ExcelUploadEnhanced] Performance date received:', performanceDate, 'Type:', typeof performanceDate, 'Length:', performanceDate?.length, 'IsEmpty:', !performanceDate, 'IsWhitespace:', performanceDate?.trim() === '');
-    }
-  }, [performanceDate, type]);
+  // Performance date tracking (no logging to reduce console noise)
 
   const typeLabels = {
     riders: { label: 'المناديب', accept: '.xlsx,.xls', template: '/templates/riders-template.xlsx' },
@@ -93,16 +88,7 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
       return;
     }
 
-    // Debug: Log before validation
-    if (type === 'performance') {
-      console.log('[ExcelUploadEnhanced] Upload triggered. Performance date check:', {
-        performanceDate,
-        type: typeof performanceDate,
-        isEmpty: !performanceDate,
-        isWhitespace: performanceDate?.trim() === '',
-        length: performanceDate?.length,
-      });
-    }
+    // Validate performance date
 
     setUploading(true);
     setUploadProgress(0);
@@ -114,10 +100,6 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
       const isDateValid = performanceDate && performanceDate.trim() !== '';
       if (type === 'performance' && !isDateValid) {
         const errorMsg = 'يرجى تحديد تاريخ بيانات الأداء قبل الرفع';
-        console.error('[ExcelUploadEnhanced] Date validation failed:', {
-          performanceDate,
-          isDateValid,
-        });
         setResult({ success: false, error: errorMsg });
         onError?.(errorMsg);
         setUploading(false);
@@ -128,10 +110,10 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
 
       // Read Excel file on client-side and convert to JSON
       // This reduces the payload size significantly (JSON is much smaller than Excel)
-      console.log('[ExcelUpload] Reading Excel file on client-side...');
       let jsonData: any[][];
       
       try {
+        setUploadProgress(15); // Reading file
         const arrayBuffer = await file.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
         const workbook = XLSX.read(data, { type: 'array', cellDates: false });
@@ -140,6 +122,7 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
           throw new Error('الملف لا يحتوي على أوراق');
         }
 
+        setUploadProgress(20); // Processing file
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
         jsonData = XLSX.utils.sheet_to_json(worksheet, {
@@ -148,13 +131,10 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
           raw: true,
         }) as any[][];
 
-        console.log('[ExcelUpload] File processed. Rows:', jsonData.length);
-        console.log('[ExcelUpload] Original file size:', (file.size / (1024 * 1024)).toFixed(2), 'MB');
-        
-        // Calculate JSON size
-        const jsonString = JSON.stringify(jsonData);
-        const jsonSizeMB = (new Blob([jsonString]).size / (1024 * 1024)).toFixed(2);
-        console.log('[ExcelUpload] JSON size:', jsonSizeMB, 'MB');
+        // Only log for large files
+        if (jsonData.length > 1000) {
+          console.log(`[ExcelUpload] Processed large file: ${jsonData.length} rows`);
+        }
       } catch (readError: any) {
         console.error('[ExcelUpload] Error reading file:', readError);
         const errorMsg = `فشل قراءة الملف: ${readError.message || 'خطأ غير معروف'}`;
@@ -182,8 +162,7 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
         return;
       }
 
-      console.log('[ExcelUpload] Uploading processed data:', file.name, 'Type:', type);
-      console.log('[ExcelUpload] Token present:', token ? 'Yes' : 'No', 'Length:', token?.length);
+      // Only log for debugging if needed
 
       // Send JSON data instead of file
       const requestBody = {
@@ -250,14 +229,13 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
           data = JSON.parse(responseText);
         } else {
           // If not JSON, it might be an HTML error page or plain text
-          console.error('[ExcelUpload] Non-JSON response:', responseText.substring(0, 200));
           if (response.status >= 400) {
             throw new Error(`خطأ من الخادم (${response.status}): ${responseText.substring(0, 100)}`);
           }
           throw new Error('استجابة غير صحيحة من الخادم');
         }
       } catch (parseError: any) {
-        console.error('[ExcelUpload] JSON parse error:', parseError);
+        console.error('[ExcelUpload] Parse error:', parseError.message);
         const errorMsg = response.status === 413 
           ? `حجم الملف كبير جداً. الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.`
           : `فشل في معالجة الاستجابة من الخادم: ${parseError.message || 'خطأ غير معروف'}`;

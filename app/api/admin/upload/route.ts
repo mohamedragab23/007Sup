@@ -19,8 +19,6 @@ export async function POST(request: NextRequest) {
   try {
     // Get token from header
     const authHeader = request.headers.get('authorization');
-    console.log('[Upload API] Authorization header:', authHeader ? 'Present' : 'Missing');
-    
     const token = authHeader?.replace('Bearer ', '').trim();
 
     if (!token) {
@@ -30,23 +28,19 @@ export async function POST(request: NextRequest) {
         error: 'غير مصرح - لم يتم توفير رمز المصادقة. يرجى تسجيل الدخول مرة أخرى.' 
       }, { status: 401 });
     }
-
-    console.log('[Upload API] Token received, length:', token.length);
     
     const decoded = verifyToken(token);
     
     if (!decoded) {
-      console.error('[Upload API] ❌ Token verification failed - invalid or expired token');
+      console.error('[Upload API] ❌ Token verification failed');
       return NextResponse.json({ 
         success: false, 
         error: 'غير مصرح - رمز المصادقة غير صحيح أو منتهي الصلاحية. يرجى تسجيل الدخول مرة أخرى.' 
       }, { status: 401 });
     }
 
-    console.log('[Upload API] Token decoded:', { code: decoded.code, role: decoded.role, name: decoded.name });
-
     if (decoded.role !== 'admin') {
-      console.error('[Upload API] ❌ Access denied - user role is not admin:', decoded.role);
+      console.error('[Upload API] ❌ Access denied - role:', decoded.role);
       return NextResponse.json({ 
         success: false, 
         error: 'غير مصرح - يجب أن تكون مسجلاً كمدير للوصول إلى هذه الصفحة.' 
@@ -141,17 +135,11 @@ export async function POST(request: NextRequest) {
 
       const result = await bulkAddRiders(ridersToAdd);
 
-      // Log detailed results
-      console.log('[Upload] BulkAdd result:', {
-        added: result.added,
-        failed: result.failed,
-        errorsCount: result.errors?.length || 0,
-        firstErrors: result.errors?.slice(0, 3) || [],
-      });
-
-      // Check if there were errors
+      // Log summary only
       if (result.errors && result.errors.length > 0) {
-        console.log('[Upload] BulkAdd errors:', result.errors.slice(0, 10));
+        console.error(`[Upload] BulkAdd completed: ${result.added} added, ${result.failed} failed, ${result.errors.length} errors`);
+      } else {
+        console.log(`[Upload] BulkAdd completed: ${result.added} added`);
       }
 
       return NextResponse.json({
@@ -203,8 +191,6 @@ export async function POST(request: NextRequest) {
         // Use admin-selected date if provided, otherwise use date from file
         const dateStr = adminSelectedDate || p.date;
         
-        console.log(`[Upload] Processing row: adminDate=${adminSelectedDate || 'none'}, fileDate=${p.date}, using=${dateStr}, riderCode=${p.riderCode}`);
-        
         return [
           dateStr, // Date in YYYY-MM-DD format
           p.riderCode,
@@ -218,13 +204,9 @@ export async function POST(request: NextRequest) {
         ];
       });
 
-      console.log(`[Upload] Writing ${performanceData.length} rows to Google Sheets`);
-      console.log(`[Upload] Sample first 3 rows:`, performanceData.slice(0, 3));
-      console.log(`[Upload] Sample last row:`, performanceData[performanceData.length - 1]);
-      
-      // Log unique dates being uploaded
+      // Log summary only (not every row)
       const uploadedDates = new Set(performanceData.map(row => row[0]));
-      console.log(`[Upload] Unique dates being uploaded: ${Array.from(uploadedDates).join(', ')}`);
+      console.log(`[Upload] Writing ${performanceData.length} rows to Google Sheets. Dates: ${Array.from(uploadedDates).slice(0, 5).join(', ')}${uploadedDates.size > 5 ? '...' : ''}`);
 
       await appendToSheet('البيانات اليومية', performanceData);
 
