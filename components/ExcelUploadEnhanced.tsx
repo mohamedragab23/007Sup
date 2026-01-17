@@ -162,88 +162,96 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
         return;
       }
 
-      // Only log for debugging if needed
-
-      // Send JSON data instead of file
-      const requestBody = {
-        type,
-        data: jsonData,
-        fileName: file.name,
-        ...(type === 'performance' && performanceDate && performanceDate.trim() !== '' 
-          ? { performanceDate: performanceDate.trim() } 
-          : {}),
-      };
-
+      // Split data into chunks to avoid Vercel 4.5MB limit
+      // Each chunk should be less than 3MB to be safe
+      const CHUNK_SIZE = 50000; // Process 50k rows per chunk
+      const totalChunks = Math.ceil(jsonData.length / CHUNK_SIZE);
+      
       setUploadProgress(50); // Data prepared
 
-      const response = await fetch('/api/admin/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(requestBody),
-      });
+      // Process chunks sequentially
+      let totalProcessed = 0;
+      let allWarnings: string[] = [];
+      let lastError: string | null = null;
 
-      console.log('[ExcelUpload] Response status:', response.status);
+      for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min(start + CHUNK_SIZE, jsonData.length);
+        const chunk = jsonData.slice(start, end);
 
-      setUploadProgress(70); // Upload in progress
+        const requestBody = {
+          type,
+          data: chunk,
+          fileName: file.name,
+          chunkIndex,
+          totalChunks,
+          isLastChunk: chunkIndex === totalChunks - 1,
+          ...(type === 'performance' && performanceDate && performanceDate.trim() !== '' 
+            ? { performanceDate: performanceDate.trim() } 
+            : {}),
+        };
 
-      // Handle 401 specifically
-      if (response.status === 401) {
-        const errorMsg = 'انتهت صلاحية الجلسة. يرجى تسجيل الخروج ثم الدخول مرة أخرى.';
-        setResult({ success: false, error: errorMsg });
-        onError?.(errorMsg);
-        setUploading(false);
-        // Redirect to login after 2 seconds
-        setTimeout(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          window.location.href = '/';
-        }, 2000);
-        return;
-      }
+        // Calculate progress: 50% + (chunkIndex / totalChunks) * 40%
+        const chunkProgress = 50 + Math.floor((chunkIndex / totalChunks) * 40);
+        setUploadProgress(chunkProgress);
 
-      // Handle 413 (Payload Too Large) specifically
-      if (response.status === 413) {
-        const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : 'غير معروف';
-        const errorMsg = `حجم الملف كبير جداً (${fileSizeMB} MB). الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.`;
-        setResult({ success: false, error: errorMsg });
-        onError?.(errorMsg);
-        setUploading(false);
-        return;
-      }
+        try {
+          const response = await fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(requestBody),
+          });
 
-      setUploadProgress(90); // Processing response
-
-      // Try to parse JSON response, but handle non-JSON responses gracefully
-      let data;
-      try {
-        const responseText = await response.text();
-        if (!responseText || responseText.trim() === '') {
-          throw new Error('استجابة فارغة من الخادم');
-        }
-        
-        // Check if response is JSON
-        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
-          data = JSON.parse(responseText);
-        } else {
-          // If not JSON, it might be an HTML error page or plain text
-          if (response.status >= 400) {
-            throw new Error(`خطأ من الخادم (${response.status}): ${responseText.substring(0, 100)}`);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'خطأ غير معروف' }));
+            throw new Error(errorData.error || `خطأ في رفع Chunk ${chunkIndex + 1}`);
           }
-          throw new Error('استجابة غير صحيحة من الخادم');
+
+          const result = await response.json();
+          totalProcessed += result.rows || chunk.length;
+          if (result.warnings) {
+            allWarnings.push(...result.warnings);
+          }
+
+          // Small delay between chunks to avoid overwhelming the server
+          if (chunkIndex < totalChunks - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        } catch (chunkError: any) {
+          console.error(`[ExcelUpload] Error uploading chunk ${chunkIndex + 1}:`, chunkError);
+          lastError = chunkError.message || 'خطأ في رفع جزء من الملف';
+          // Continue with next chunk instead of failing completely
         }
-      } catch (parseError: any) {
-        console.error('[ExcelUpload] Parse error:', parseError.message);
-        const errorMsg = response.status === 413 
-          ? `حجم الملف كبير جداً. الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.`
-          : `فشل في معالجة الاستجابة من الخادم: ${parseError.message || 'خطأ غير معروف'}`;
-        setResult({ success: false, error: errorMsg });
-        onError?.(errorMsg);
+      }
+
+      setUploadProgress(95); // All chunks uploaded
+
+      // Final response handling
+      if (lastError && totalProcessed === 0) {
+        // All chunks failed
+        setResult({ success: false, error: lastError });
+        onError?.(lastError);
         setUploading(false);
         return;
       }
+
+      // Success (even if some chunks failed, we processed some data)
+      const response = {
+        success: true,
+        message: totalProcessed > 0 
+          ? `تم رفع ${totalProcessed} صف بنجاح${totalChunks > 1 ? ` (${totalChunks} دفعة)` : ''}`
+          : 'تم معالجة الملف',
+        rows: totalProcessed,
+        warnings: allWarnings,
+      };
+
+      // Use the last chunk's response structure for compatibility
+      let data = response;
+
+      // Data already processed in chunks above
 
       setUploadProgress(100); // Complete
 

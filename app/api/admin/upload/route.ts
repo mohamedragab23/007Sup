@@ -52,13 +52,19 @@ export async function POST(request: NextRequest) {
     let rawData: any[][];
     let type: string;
     let adminSelectedDate: string | undefined;
+    let chunkIndex: number | undefined;
+    let totalChunks: number | undefined;
+    let isLastChunk: boolean | undefined;
 
     if (contentType.includes('application/json')) {
-      // New method: JSON data (processed on client-side)
-      const body = await request.json();
+      // New method: JSON data (processed on client-side, may be chunked)
+      const body = await request.json() as any;
       type = body.type;
       rawData = body.data;
       adminSelectedDate = body.performanceDate;
+      chunkIndex = body.chunkIndex;
+      totalChunks = body.totalChunks;
+      isLastChunk = body.isLastChunk;
       
       if (!type) {
         return NextResponse.json({ success: false, error: 'نوع الملف مطلوب' }, { status: 400 });
@@ -68,7 +74,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'بيانات غير صحيحة' }, { status: 400 });
       }
 
-      console.log('[Upload API] Received JSON data:', { type, rows: rawData.length, hasDate: !!adminSelectedDate });
+      // Log chunk info if it's a chunked upload
+      if (totalChunks && totalChunks > 1) {
+        console.log(`[Upload API] Received chunk ${(chunkIndex || 0) + 1}/${totalChunks}: ${rawData.length} rows`);
+      } else {
+        console.log(`[Upload API] Received JSON data: ${type}, ${rawData.length} rows`);
+      }
     } else {
       // Legacy method: FormData with file
       const formData = await request.formData();
@@ -210,10 +221,12 @@ export async function POST(request: NextRequest) {
 
       await appendToSheet('البيانات اليومية', performanceData);
 
-      // Clear cache and notify supervisors
-      const { invalidateSupervisorCaches, notifySupervisorsOfChange } = await import('@/lib/realtimeSync');
-      invalidateSupervisorCaches(); // Clear all caches to force refresh
-      notifySupervisorsOfChange('performance');
+      // Clear cache and notify supervisors only on last chunk
+      if (isLastChunk === true || (!totalChunks || totalChunks === 1)) {
+        const { invalidateSupervisorCaches, notifySupervisorsOfChange } = await import('@/lib/realtimeSync');
+        invalidateSupervisorCaches(); // Clear all caches to force refresh
+        notifySupervisorsOfChange('performance');
+      }
 
       return NextResponse.json({
         success: true,
