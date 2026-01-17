@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 
 interface ExcelUploadEnhancedProps {
   type: 'riders' | 'performance';
@@ -32,16 +33,6 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
   const [isDragActive, setIsDragActive] = useState(false);
 
   const handleFileSelect = useCallback((selectedFile: File) => {
-    // Check file size before accepting (4MB limit - Vercel maximum is 4.5MB)
-    const maxFileSize = 4 * 1024 * 1024; // 4MB in bytes
-    if (selectedFile.size > maxFileSize) {
-      const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2);
-      const errorMsg = `حجم الملف كبير جداً (${fileSizeMB} MB). الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.`;
-      setResult({ success: false, error: errorMsg });
-      onError?.(errorMsg);
-      return;
-    }
-
     setFile(selectedFile);
     setResult(null);
     setPreview(null);
@@ -54,7 +45,7 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
       size: selectedFile.size > 1024 * 1024 ? `${fileSizeMB} MB` : `${fileSizeKB} KB`,
       type: selectedFile.type,
     });
-  }, [onError]);
+  }, []);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -133,17 +124,47 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
         return;
       }
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('type', type);
-      if (type === 'performance' && performanceDate && performanceDate.trim() !== '') {
-        formData.append('performanceDate', performanceDate.trim());
-        console.log('[ExcelUpload] Performance date set:', performanceDate.trim());
-      } else if (type === 'performance') {
-        console.warn('[ExcelUpload] Performance date is missing or empty:', performanceDate);
+      setUploadProgress(10); // Starting file processing
+
+      // Read Excel file on client-side and convert to JSON
+      // This reduces the payload size significantly (JSON is much smaller than Excel)
+      console.log('[ExcelUpload] Reading Excel file on client-side...');
+      let jsonData: any[][];
+      
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const data = new Uint8Array(arrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array', cellDates: false });
+        
+        if (workbook.SheetNames.length === 0) {
+          throw new Error('الملف لا يحتوي على أوراق');
+        }
+
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        jsonData = XLSX.utils.sheet_to_json(worksheet, {
+          header: 1,
+          defval: '',
+          raw: true,
+        }) as any[][];
+
+        console.log('[ExcelUpload] File processed. Rows:', jsonData.length);
+        console.log('[ExcelUpload] Original file size:', (file.size / (1024 * 1024)).toFixed(2), 'MB');
+        
+        // Calculate JSON size
+        const jsonString = JSON.stringify(jsonData);
+        const jsonSizeMB = (new Blob([jsonString]).size / (1024 * 1024)).toFixed(2);
+        console.log('[ExcelUpload] JSON size:', jsonSizeMB, 'MB');
+      } catch (readError: any) {
+        console.error('[ExcelUpload] Error reading file:', readError);
+        const errorMsg = `فشل قراءة الملف: ${readError.message || 'خطأ غير معروف'}`;
+        setResult({ success: false, error: errorMsg });
+        onError?.(errorMsg);
+        setUploading(false);
+        return;
       }
 
-      setUploadProgress(30); // File prepared
+      setUploadProgress(30); // File processed
 
       const token = localStorage.getItem('token');
       
@@ -161,15 +182,28 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
         return;
       }
 
-      console.log('[ExcelUpload] Uploading file:', file.name, 'Type:', type);
+      console.log('[ExcelUpload] Uploading processed data:', file.name, 'Type:', type);
       console.log('[ExcelUpload] Token present:', token ? 'Yes' : 'No', 'Length:', token?.length);
+
+      // Send JSON data instead of file
+      const requestBody = {
+        type,
+        data: jsonData,
+        fileName: file.name,
+        ...(type === 'performance' && performanceDate && performanceDate.trim() !== '' 
+          ? { performanceDate: performanceDate.trim() } 
+          : {}),
+      };
+
+      setUploadProgress(50); // Data prepared
 
       const response = await fetch('/api/admin/upload', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: formData,
+        body: JSON.stringify(requestBody),
       });
 
       console.log('[ExcelUpload] Response status:', response.status);

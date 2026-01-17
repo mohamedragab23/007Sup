@@ -53,32 +53,47 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const type = formData.get('type') as string; // 'riders' | 'debts' | 'performance'
-    const adminSelectedDate = formData.get('performanceDate')?.toString(); // Date selected by admin for performance data
+    // Support both JSON (new method) and FormData (legacy)
+    const contentType = request.headers.get('content-type') || '';
+    let rawData: any[][];
+    let type: string;
+    let adminSelectedDate: string | undefined;
 
-    if (!file) {
-      return NextResponse.json({ success: false, error: 'لم يتم اختيار ملف' }, { status: 400 });
+    if (contentType.includes('application/json')) {
+      // New method: JSON data (processed on client-side)
+      const body = await request.json();
+      type = body.type;
+      rawData = body.data;
+      adminSelectedDate = body.performanceDate;
+      
+      if (!type) {
+        return NextResponse.json({ success: false, error: 'نوع الملف مطلوب' }, { status: 400 });
+      }
+
+      if (!rawData || !Array.isArray(rawData)) {
+        return NextResponse.json({ success: false, error: 'بيانات غير صحيحة' }, { status: 400 });
+      }
+
+      console.log('[Upload API] Received JSON data:', { type, rows: rawData.length, hasDate: !!adminSelectedDate });
+    } else {
+      // Legacy method: FormData with file
+      const formData = await request.formData();
+      const file = formData.get('file') as File;
+      type = formData.get('type') as string;
+      adminSelectedDate = formData.get('performanceDate')?.toString();
+
+      if (!file) {
+        return NextResponse.json({ success: false, error: 'لم يتم اختيار ملف' }, { status: 400 });
+      }
+
+      if (!type) {
+        return NextResponse.json({ success: false, error: 'نوع الملف مطلوب' }, { status: 400 });
+      }
+
+      // Read Excel file
+      const arrayBuffer = await file.arrayBuffer();
+      rawData = await readExcelFromBuffer(arrayBuffer);
     }
-
-    // Check file size (4MB limit - Vercel maximum is 4.5MB)
-    const maxFileSize = 4 * 1024 * 1024; // 4MB in bytes (Vercel limit is 4.5MB)
-    if (file.size > maxFileSize) {
-      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      return NextResponse.json({ 
-        success: false, 
-        error: `حجم الملف كبير جداً (${fileSizeMB} MB). الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.` 
-      }, { status: 413 });
-    }
-
-    if (!type) {
-      return NextResponse.json({ success: false, error: 'نوع الملف مطلوب' }, { status: 400 });
-    }
-
-    // Read Excel file
-    const arrayBuffer = await file.arrayBuffer();
-    const rawData = await readExcelFromBuffer(arrayBuffer);
 
     if (type === 'riders') {
       // Step 1: Process Excel
