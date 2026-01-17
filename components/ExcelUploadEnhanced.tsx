@@ -272,7 +272,9 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
           setPreview(null);
         }, 3000);
       } else {
-        const errorMsg = data.error || 'فشل رفع الملف';
+        // This should not happen since we set success: true above
+        // But handle it just in case
+        const errorMsg = 'فشل رفع الملف';
         setResult({ 
           success: false, 
           error: errorMsg, 
