@@ -32,17 +32,29 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
   const [isDragActive, setIsDragActive] = useState(false);
 
   const handleFileSelect = useCallback((selectedFile: File) => {
+    // Check file size before accepting (4MB limit - Vercel maximum is 4.5MB)
+    const maxFileSize = 4 * 1024 * 1024; // 4MB in bytes
+    if (selectedFile.size > maxFileSize) {
+      const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2);
+      const errorMsg = `حجم الملف كبير جداً (${fileSizeMB} MB). الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.`;
+      setResult({ success: false, error: errorMsg });
+      onError?.(errorMsg);
+      return;
+    }
+
     setFile(selectedFile);
     setResult(null);
     setPreview(null);
 
     // Preview file info
+    const fileSizeKB = (selectedFile.size / 1024).toFixed(2);
+    const fileSizeMB = (selectedFile.size / (1024 * 1024)).toFixed(2);
     setPreview({
       name: selectedFile.name,
-      size: (selectedFile.size / 1024).toFixed(2) + ' KB',
+      size: selectedFile.size > 1024 * 1024 ? `${fileSizeMB} MB` : `${fileSizeKB} KB`,
       type: selectedFile.type,
     });
-  }, []);
+  }, [onError]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -179,9 +191,47 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
         return;
       }
 
+      // Handle 413 (Payload Too Large) specifically
+      if (response.status === 413) {
+        const fileSizeMB = file ? (file.size / (1024 * 1024)).toFixed(2) : 'غير معروف';
+        const errorMsg = `حجم الملف كبير جداً (${fileSizeMB} MB). الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.`;
+        setResult({ success: false, error: errorMsg });
+        onError?.(errorMsg);
+        setUploading(false);
+        return;
+      }
+
       setUploadProgress(90); // Processing response
 
-      const data = await response.json();
+      // Try to parse JSON response, but handle non-JSON responses gracefully
+      let data;
+      try {
+        const responseText = await response.text();
+        if (!responseText || responseText.trim() === '') {
+          throw new Error('استجابة فارغة من الخادم');
+        }
+        
+        // Check if response is JSON
+        if (responseText.trim().startsWith('{') || responseText.trim().startsWith('[')) {
+          data = JSON.parse(responseText);
+        } else {
+          // If not JSON, it might be an HTML error page or plain text
+          console.error('[ExcelUpload] Non-JSON response:', responseText.substring(0, 200));
+          if (response.status >= 400) {
+            throw new Error(`خطأ من الخادم (${response.status}): ${responseText.substring(0, 100)}`);
+          }
+          throw new Error('استجابة غير صحيحة من الخادم');
+        }
+      } catch (parseError: any) {
+        console.error('[ExcelUpload] JSON parse error:', parseError);
+        const errorMsg = response.status === 413 
+          ? `حجم الملف كبير جداً. الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.`
+          : `فشل في معالجة الاستجابة من الخادم: ${parseError.message || 'خطأ غير معروف'}`;
+        setResult({ success: false, error: errorMsg });
+        onError?.(errorMsg);
+        setUploading(false);
+        return;
+      }
 
       setUploadProgress(100); // Complete
 

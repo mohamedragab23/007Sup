@@ -12,6 +12,8 @@ import { bulkAddRiders, getAllRiders } from '@/lib/adminService';
 import { appendToSheet } from '@/lib/googleSheets';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const maxDuration = 60; // 60 seconds for large file processing
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,6 +60,16 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'لم يتم اختيار ملف' }, { status: 400 });
+    }
+
+    // Check file size (4MB limit - Vercel maximum is 4.5MB)
+    const maxFileSize = 4 * 1024 * 1024; // 4MB in bytes (Vercel limit is 4.5MB)
+    if (file.size > maxFileSize) {
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      return NextResponse.json({ 
+        success: false, 
+        error: `حجم الملف كبير جداً (${fileSizeMB} MB). الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.` 
+      }, { status: 413 });
     }
 
     if (!type) {
@@ -217,6 +229,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'نوع الملف غير مدعوم' }, { status: 400 });
   } catch (error: any) {
     console.error('Upload error:', error);
+    
+    // Handle specific errors
+    if (error.message?.includes('413') || error.message?.includes('Payload Too Large') || error.message?.includes('body size')) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'حجم الملف كبير جداً. الحد الأقصى المسموح به هو 4 MB. يرجى تقليل حجم الملف أو تقسيمه إلى ملفات أصغر.' 
+      }, { status: 413 });
+    }
+    
     return NextResponse.json({ success: false, error: error.message || 'حدث خطأ' }, { status: 500 });
   }
 }
