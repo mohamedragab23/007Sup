@@ -116,20 +116,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Step 2: Check for duplicates
-      // Note: bulkAddRiders will handle updates for unassigned riders automatically
-      // We only check for actual conflicts (riders assigned to different supervisors)
-      const existingRiders = await getAllRiders();
+      // Step 2: Check for duplicates in the file itself (not conflicts with existing)
+      // Note: bulkAddRiders will handle updates and reassignments automatically
+      // We only check for duplicates within the same file (same rider code appears twice)
       const { checkDuplicateRiders } = await import('@/lib/excelProcessor');
-      const duplicateCheck = await checkDuplicateRiders(processed.data, existingRiders);
+      const duplicateCheck = await checkDuplicateRiders(processed.data, []); // Empty array to only check file duplicates
 
-      // Only fail if there are actual conflicts (not just existing riders without supervisor)
-      if (duplicateCheck.duplicates.length > 0 || duplicateCheck.conflicts.length > 0) {
+      // Only fail if there are duplicates within the file itself
+      if (duplicateCheck.duplicates.length > 0) {
         return NextResponse.json(
           {
             success: false,
-            error: duplicateCheck.conflicts.length > 0 ? 'تم العثور على تعيينات متضاربة' : 'تم العثور على تكرارات في الملف',
-            errors: [...duplicateCheck.duplicates, ...duplicateCheck.conflicts],
+            error: 'تم العثور على تكرارات في الملف',
+            errors: duplicateCheck.duplicates.map(d => `${d}: كود مكرر في نفس الملف`),
             warnings: processed.warnings,
           },
           { status: 400 }

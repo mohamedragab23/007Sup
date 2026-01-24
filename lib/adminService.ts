@@ -649,10 +649,10 @@ export async function bulkAddRiders(riders: Rider[]): Promise<{
         console.log(`[BulkAdd] Rider ${riderCodeTrimmed} already assigned to same supervisor ${newSupervisorCode}, skipping.`);
         continue;
       } else if (existingRider && isValidSupervisorCode(existingSupervisorCode)) {
-        // Different valid supervisor - this is a conflict
-        failed++;
-        errors.push(`${riderCodeTrimmed}: المندوب معين بالفعل للمشرف ${existingSupervisorCode}`);
-        console.log(`[BulkAdd] Conflict: Rider ${riderCodeTrimmed} already assigned to different supervisor ${existingSupervisorCode}.`);
+        // Different valid supervisor - ALLOW REASSIGNMENT (admin wants to reassign)
+        // Add to update list to change supervisor assignment
+        updateRows.push({ rowIndex: -1, data: riderData });
+        console.log(`[BulkAdd] Rider ${riderCodeTrimmed} reassignment: from "${existingSupervisorCode}" to "${newSupervisorCode}", scheduled for update.`);
         continue;
       }
     }
@@ -664,30 +664,66 @@ export async function bulkAddRiders(riders: Rider[]): Promise<{
 
   console.log(`[BulkAdd] Summary: ${validRows.length} new riders, ${updateRows.length} updates, ${failed} failed`);
 
-  // Handle updates for existing riders without supervisor
+  // Handle updates for existing riders (reassignments or unassigned riders)
   if (updateRows.length > 0) {
     try {
       const { getSheetData, updateSheetRange } = await import('./googleSheets');
       const ridersSheet = await getSheetData('المناديب', false);
+      const supervisorCodesToInvalidate = new Set<string>();
       
       for (const update of updateRows) {
         // Find row index for this rider
         let rowIndex = -1;
+        let oldSupervisorCode = '';
         for (let i = 1; i < ridersSheet.length; i++) {
           if (ridersSheet[i][0]?.toString().trim() === update.data[0]) {
             rowIndex = i + 1; // Google Sheets is 1-indexed
+            oldSupervisorCode = ridersSheet[i][3]?.toString().trim() || '';
             break;
           }
         }
         
         if (rowIndex > 0) {
           // Update the row
-          await updateSheetRange('المناديب', `A${rowIndex}:H${rowIndex}`, [update.data]);
-          added++;
+          const updateSuccess = await updateSheetRange('المناديب', `A${rowIndex}:H${rowIndex}`, [update.data]);
+          if (updateSuccess) {
+            added++;
+            // Track supervisor codes for cache invalidation
+            const newSupervisorCode = update.data[3]?.toString().trim() || '';
+            if (oldSupervisorCode && oldSupervisorCode !== '') {
+              supervisorCodesToInvalidate.add(oldSupervisorCode);
+            }
+            if (newSupervisorCode && newSupervisorCode !== '') {
+              supervisorCodesToInvalidate.add(newSupervisorCode);
+            }
+            console.log(`[BulkAdd] Updated rider ${update.data[0]} from supervisor "${oldSupervisorCode}" to "${newSupervisorCode}"`);
+          } else {
+            failed++;
+            errors.push(`${update.data[0]}: فشل تحديث المندوب في Google Sheets`);
+          }
         } else {
           failed++;
           errors.push(`${update.data[0]}: لم يتم العثور على المندوب للتحديث`);
         }
+      }
+      
+      // Clear caches for affected supervisors
+      if (supervisorCodesToInvalidate.size > 0) {
+        const { invalidateSupervisorCaches, notifySupervisorsOfChange } = await import('./realtimeSync');
+        const { cache, CACHE_KEYS } = await import('./cache');
+        
+        supervisorCodesToInvalidate.forEach((code) => {
+          invalidateSupervisorCaches(code);
+          cache.clear(CACHE_KEYS.supervisorRiders(code));
+          cache.clear(CACHE_KEYS.ridersData(code));
+        });
+        
+        // Clear all riders cache
+        cache.clear('admin:riders');
+        cache.clear(CACHE_KEYS.sheetData('المناديب'));
+        
+        notifySupervisorsOfChange('riders');
+        console.log(`[BulkAdd] Cleared caches for supervisors: ${Array.from(supervisorCodesToInvalidate).join(', ')}`);
       }
     } catch (error: any) {
       failed += updateRows.length;
