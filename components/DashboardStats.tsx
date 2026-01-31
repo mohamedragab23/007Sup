@@ -45,19 +45,19 @@ const DashboardStats = memo(function DashboardStats({ data }: { data: DashboardD
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 min-w-0">
       {stats.map((stat, index) => (
         <div
           key={index}
-          className="bg-white rounded-xl shadow-sm p-5 border border-gray-100 hover:shadow-md transition-shadow"
+          className="bg-white rounded-xl shadow-sm p-3 sm:p-5 border border-gray-100 hover:shadow-md transition-shadow min-w-0 overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-3">
-            <div className={`${stat.color} p-2.5 rounded-lg text-white text-xl`}>
+          <div className="flex items-center justify-between mb-2 sm:mb-3">
+            <div className={`${stat.color} p-2 sm:p-2.5 rounded-lg text-white text-lg sm:text-xl shrink-0`}>
               {stat.icon}
             </div>
           </div>
-          <h3 className="text-gray-600 text-xs mb-1">{stat.label}</h3>
-          <p className="text-xl font-bold text-gray-800">{stat.value}</p>
+          <h3 className="text-gray-600 text-xs mb-1 truncate">{stat.label}</h3>
+          <p className="text-base sm:text-xl font-bold text-gray-800 break-all">{stat.value}</p>
         </div>
       ))}
     </div>

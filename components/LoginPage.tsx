@@ -47,13 +47,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-3 sm:px-4 py-4 overflow-x-hidden">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-4 sm:p-8 min-w-0">
+        <div className="text-center mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">
             نظام إدارة المشرفين
           </h1>
-          <p className="text-gray-600">007 للخدمات اللوجستية</p>
+          <p className="text-gray-600 text-sm sm:text-base break-words">007 للخدمات اللوجستية</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

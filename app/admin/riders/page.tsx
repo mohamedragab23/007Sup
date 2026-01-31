@@ -156,15 +156,15 @@ export default function AdminRidersPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">إدارة المناديب</h1>
-            <p className="text-gray-600">إضافة وتعيين المناديب للمشرفين</p>
+      <div className="space-y-6 min-w-0">
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">إدارة المناديب</h1>
+            <p className="text-gray-600 text-sm sm:text-base break-words">إضافة وتعيين المناديب للمشرفين</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors text-sm sm:text-base shrink-0"
           >
             + إضافة مندوب
           </button>

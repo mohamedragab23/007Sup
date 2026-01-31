@@ -22,6 +22,14 @@ body {
   font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Prevent horizontal scroll on mobile - flex/grid children can shrink */
+@layer utilities {
+  .safe-overflow {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
@@ -30,6 +38,14 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  min-width: 0;
+}
+
+/* Table scroll containers: allow horizontal scroll inside, no page overflow */
+@media (max-width: 768px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 a {

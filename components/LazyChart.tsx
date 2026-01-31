@@ -53,7 +53,7 @@ interface LazyChartProps {
 
 export default function LazyChart({ data, dataKeys, colors = ['#3b82f6', '#10b981'] }: LazyChartProps) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 overflow-hidden">
       <RechartsComponents data={data} dataKeys={dataKeys} colors={colors} />
     </div>
   );

@@ -82,14 +82,14 @@ export default function PerformancePage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">تتبع الأداء</h1>
-          <p className="text-gray-600">تحليل أداء المناديب خلال فترة محددة - حدد التاريخ لعرض البيانات</p>
+      <div className="space-y-6 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">تتبع الأداء</h1>
+          <p className="text-gray-600 text-sm sm:text-base break-words">تحليل أداء المناديب خلال فترة محددة - حدد التاريخ لعرض البيانات</p>
         </div>
 
         {/* Date Selection */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label htmlFor="performance-start-date" className="block text-sm font-medium text-gray-700 mb-2">من تاريخ</label>
@@ -128,13 +128,13 @@ export default function PerformancePage() {
 
         {/* Key Metrics Cards */}
         {performanceStats && performanceStats.labels && performanceStats.labels.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-4 min-w-0">
             {/* Total Hours */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-100 text-xs font-medium">إجمالي الساعات</p>
-                  <p className="text-2xl font-bold mt-1">{totalHours.toFixed(1)}</p>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-3 sm:p-4 text-white min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <p className="text-blue-100 text-xs font-medium truncate">إجمالي الساعات</p>
+                  <p className="text-lg sm:text-2xl font-bold mt-1 break-all">{totalHours.toFixed(1)}</p>
                   <p className="text-blue-200 text-xs mt-1">ساعة</p>
                 </div>
                 <div className="text-3xl opacity-80">⏱️</div>
@@ -142,11 +142,11 @@ export default function PerformancePage() {
             </div>
 
             {/* Total Orders */}
-            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-100 text-xs font-medium">إجمالي الطلبات</p>
-                  <p className="text-2xl font-bold mt-1">{totalOrders.toLocaleString()}</p>
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-3 sm:p-4 text-white min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <p className="text-green-100 text-xs font-medium truncate">إجمالي الطلبات</p>
+                  <p className="text-lg sm:text-2xl font-bold mt-1 break-all">{totalOrders.toLocaleString()}</p>
                   <p className="text-green-200 text-xs mt-1">طلب</p>
                 </div>
                 <div className="text-3xl opacity-80">📦</div>
@@ -154,11 +154,11 @@ export default function PerformancePage() {
             </div>
 
             {/* Total Absences */}
-            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-red-100 text-xs font-medium">إجمالي الغيابات</p>
-                  <p className="text-2xl font-bold mt-1">{performanceStats?.totalAbsences || 0}</p>
+            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl shadow-lg p-3 sm:p-4 text-white min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <p className="text-red-100 text-xs font-medium truncate">إجمالي الغيابات</p>
+                  <p className="text-lg sm:text-2xl font-bold mt-1">{performanceStats?.totalAbsences || 0}</p>
                   <p className="text-red-200 text-xs mt-1">غياب</p>
                 </div>
                 <div className="text-3xl opacity-80">❌</div>
@@ -166,11 +166,11 @@ export default function PerformancePage() {
             </div>
 
             {/* Total Breaks */}
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-100 text-xs font-medium">إجمالي الاستراحات</p>
-                  <p className="text-2xl font-bold mt-1">{(performanceStats?.totalBreaks || 0).toFixed(1)}</p>
+            <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-3 sm:p-4 text-white min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <p className="text-orange-100 text-xs font-medium truncate">إجمالي الاستراحات</p>
+                  <p className="text-lg sm:text-2xl font-bold mt-1">{(performanceStats?.totalBreaks || 0).toFixed(1)}</p>
                   <p className="text-orange-200 text-xs mt-1">دقيقة</p>
                 </div>
                 <div className="text-3xl opacity-80">☕</div>
@@ -178,11 +178,11 @@ export default function PerformancePage() {
             </div>
 
             {/* Average Acceptance Rate */}
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-100 text-xs font-medium">متوسط القبول</p>
-                  <p className="text-2xl font-bold mt-1">
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-3 sm:p-4 text-white min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <p className="text-purple-100 text-xs font-medium truncate">متوسط القبول</p>
+                  <p className="text-lg sm:text-2xl font-bold mt-1">
                     {(performanceStats?.avgAcceptance || 0).toFixed(1)}%
                   </p>
                   <p className="text-purple-200 text-xs mt-1">معدل</p>
@@ -192,13 +192,13 @@ export default function PerformancePage() {
             </div>
 
             {/* Best Performance Day */}
-            <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg p-4 text-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-amber-100 text-xs font-medium">أفضل يوم</p>
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg p-3 sm:p-4 text-white min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <p className="text-amber-100 text-xs font-medium truncate">أفضل يوم</p>
                   {bestDay ? (
                     <>
-                      <p className="text-lg font-bold mt-1">{bestDay.date}</p>
+                      <p className="text-sm sm:text-lg font-bold mt-1 break-all">{bestDay.date}</p>
                       <p className="text-amber-200 text-xs mt-1">
                         {bestDay.orders} طلب
                       </p>

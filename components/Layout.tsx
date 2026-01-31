@@ -72,7 +72,7 @@ export default function Layout({ children }: LayoutProps) {
   const menuItems = getMenuItems();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       {/* Mobile Header */}
       <div className="lg:hidden bg-white shadow-sm border-b">
         <div className="flex items-center justify-between p-4">
@@ -142,8 +142,8 @@ export default function Layout({ children }: LayoutProps) {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-0">
-          <div className="p-4 lg:p-8">{children}</div>
+        <main className="flex-1 min-w-0 w-full max-w-full lg:ml-0">
+          <div className="p-4 lg:p-8 min-w-0 max-w-full">{children}</div>
         </main>
       </div>
     </div>

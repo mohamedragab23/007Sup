@@ -9,10 +9,10 @@ interface TopRider {
 
 export default function TopRidersTable({ topRiders }: { topRiders: TopRider[] }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">أفضل المناديب</h3>
+    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 overflow-hidden">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 break-words">أفضل المناديب</h3>
       {topRiders.length > 0 ? (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-w-0">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">

@@ -26,14 +26,14 @@ export default function AdminPerformancePage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">رفع بيانات الأداء</h1>
-          <p className="text-gray-600">رفع بيانات الأداء اليومية للمناديب من ملف Excel</p>
+      <div className="space-y-6 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">رفع بيانات الأداء</h1>
+          <p className="text-gray-600 text-sm sm:text-base break-words">رفع بيانات الأداء اليومية للمناديب من ملف Excel</p>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h3 className="text-blue-800 font-semibold mb-2">📋 تنسيق الملف المطلوب:</h3>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-6 min-w-0 overflow-hidden">
+          <h3 className="text-blue-800 font-semibold mb-2 break-words">📋 تنسيق الملف المطلوب:</h3>
           <div className="text-sm text-blue-700 space-y-1">
             <p>الأعمدة المطلوبة (بالترتيب):</p>
             <ul className="list-disc list-inside mr-4 space-y-1">

@@ -295,17 +295,17 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">رفع ملف {typeLabels[type].label}</h3>
+    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 max-w-full min-w-0">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 break-words">رفع ملف {typeLabels[type].label}</h3>
 
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         {/* Drag & Drop Zone */}
         <div
           onClick={handleClick}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+          className={`border-2 border-dashed rounded-lg p-4 sm:p-8 text-center cursor-pointer transition-colors ${
             isDragActive
               ? 'border-blue-500 bg-blue-50'
               : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
@@ -448,8 +448,8 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
         )}
 
         {/* Instructions */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm font-semibold text-gray-700 mb-2">متطلبات الملف:</p>
+        <div className="mt-6 p-3 sm:p-4 bg-gray-50 rounded-lg min-w-0 overflow-hidden">
+          <p className="text-sm font-semibold text-gray-700 mb-2 break-words">متطلبات الملف:</p>
           {type === 'riders' && (
             <div className="text-xs text-gray-600 space-y-1">
               <p>الأعمدة المطلوبة (بالترتيب):</p>

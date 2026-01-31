@@ -153,19 +153,19 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">لوحة التحكم</h1>
-          <p className="text-gray-600">نظرة عامة على الأداء والإحصائيات</p>
+      <div className="space-y-6 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">لوحة التحكم</h1>
+          <p className="text-gray-600 text-sm sm:text-base break-words">نظرة عامة على الأداء والإحصائيات</p>
         </div>
 
         {/* Assignment Request Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">إضافة تعيين جديد</h2>
-                <p className="text-sm text-gray-600 mt-1">أضف مندوب جديد واطلب تعيينه لك</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden min-w-0">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div className="min-w-0">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-800 break-words">إضافة تعيين جديد</h2>
+                <p className="text-sm text-gray-600 mt-1 break-words">أضف مندوب جديد واطلب تعيينه لك</p>
                 {pendingRequestsCount > 0 && (
                   <p className="text-sm text-yellow-600 mt-1 font-medium">
                     لديك {pendingRequestsCount} طلب تعيين قيد الانتظار

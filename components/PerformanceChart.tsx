@@ -107,8 +107,8 @@ const PerformanceChart = memo(function PerformanceChart({ startDate, endDate }: 
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">{formatDateRange()}</h3>
+    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 max-w-full overflow-hidden">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 break-words">{formatDateRange()}</h3>
       {performanceData && performanceData.length > 0 ? (
         <LazyChart data={performanceData} dataKeys={['طلبات', 'ساعات']} />
       ) : (
