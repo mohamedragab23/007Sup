@@ -29,6 +29,18 @@ const defaultLimits: SupervisorLimits = {
   helmet: 0,
 };
 
+/** تأكد أن القيم أرقام صحيحة >= 0 (منع NaN أو قيم سالبة من الملف) */
+function normalizeLimits(raw: Record<string, unknown> | null): SupervisorLimits {
+  if (!raw || typeof raw !== 'object') return { ...defaultLimits };
+  return {
+    motorcycleBox: Math.max(0, Math.floor(Number((raw as any).motorcycleBox)) || 0),
+    bicycleBox: Math.max(0, Math.floor(Number((raw as any).bicycleBox)) || 0),
+    tshirt: Math.max(0, Math.floor(Number((raw as any).tshirt)) || 0),
+    jacket: Math.max(0, Math.floor(Number((raw as any).jacket)) || 0),
+    helmet: Math.max(0, Math.floor(Number((raw as any).helmet)) || 0),
+  };
+}
+
 function ensureDataDir() {
   const dataDir = path.join(process.cwd(), 'data');
   if (!fs.existsSync(dataDir)) {
@@ -80,10 +92,7 @@ export async function GET(request: NextRequest) {
       code: sup.code,
       name: sup.name,
       region: sup.region,
-      limits: {
-        ...defaultLimits,
-        ...(stored[sup.code] || {}),
-      },
+      limits: normalizeLimits(stored[sup.code] as any),
     }));
 
     return NextResponse.json({ success: true, data: { supervisors: list } });
@@ -117,15 +126,18 @@ export async function POST(request: NextRequest) {
 
     for (const [code, val] of Object.entries(limits)) {
       if (!code || typeof val !== 'object') continue;
+      const existingNorm = normalizeLimits(existing[code] as any);
       merged[code] = {
-        ...defaultLimits,
-        ...(existing[code] || {}),
-        motorcycleBox: Number(val.motorcycleBox) >= 0 ? Number(val.motorcycleBox) : defaultLimits.motorcycleBox,
-        bicycleBox: Number(val.bicycleBox) >= 0 ? Number(val.bicycleBox) : defaultLimits.bicycleBox,
-        tshirt: Number(val.tshirt) >= 0 ? Number(val.tshirt) : defaultLimits.tshirt,
-        jacket: Number(val.jacket) >= 0 ? Number(val.jacket) : defaultLimits.jacket,
-        helmet: Number(val.helmet) >= 0 ? Number(val.helmet) : defaultLimits.helmet,
+        motorcycleBox: Math.max(0, Math.floor(Number(val.motorcycleBox)) || 0),
+        bicycleBox: Math.max(0, Math.floor(Number(val.bicycleBox)) || 0),
+        tshirt: Math.max(0, Math.floor(Number(val.tshirt)) || 0),
+        jacket: Math.max(0, Math.floor(Number(val.jacket)) || 0),
+        helmet: Math.max(0, Math.floor(Number(val.helmet)) || 0),
       };
+      // إذا لم يرسل العميل حقولاً، احتفظ بالقيم المخزنة
+      if (val.motorcycleBox === undefined && val.bicycleBox === undefined && val.tshirt === undefined && val.jacket === undefined && val.helmet === undefined) {
+        merged[code] = existingNorm;
+      }
     }
 
     const saved = writeLimits(merged);

@@ -53,7 +53,13 @@ export async function GET(request: NextRequest) {
       total_hours: number;
       avg_acceptance: number;
       records_count: number;
+      orders_per_rider: number;
     }> = [];
+
+    let grandTotalOrders = 0;
+    let grandTotalHours = 0;
+    let grandAcceptanceSum = 0;
+    let grandAcceptanceCount = 0;
 
     for (const sup of supervisors) {
       const riders = await getSupervisorRiders(sup.code, false);
@@ -74,7 +80,13 @@ export async function GET(request: NextRequest) {
         acceptanceCount += 1;
       }
 
+      grandTotalOrders += totalOrders;
+      grandTotalHours += totalHours;
+      grandAcceptanceSum += acceptanceSum;
+      grandAcceptanceCount += acceptanceCount;
+
       const avgAcceptance = acceptanceCount > 0 ? Math.round((acceptanceSum / acceptanceCount) * 100) / 100 : 0;
+      const ordersPerRider = riders.length > 0 ? Math.round((totalOrders / riders.length) * 100) / 100 : 0;
 
       results.push({
         code: sup.code,
@@ -85,14 +97,26 @@ export async function GET(request: NextRequest) {
         total_hours: Math.round(totalHours * 100) / 100,
         avg_acceptance: avgAcceptance,
         records_count: performance.length,
+        orders_per_rider: ordersPerRider,
       });
     }
+
+    const grandAvgAcceptance = grandAcceptanceCount > 0
+      ? Math.round((grandAcceptanceSum / grandAcceptanceCount) * 100) / 100
+      : 0;
 
     return NextResponse.json({
       success: true,
       data: {
         start_date: startDateStr,
         end_date: endDateStr,
+        summary: {
+          total_supervisors: results.length,
+          total_orders: grandTotalOrders,
+          total_hours: Math.round(grandTotalHours * 100) / 100,
+          avg_acceptance: grandAvgAcceptance,
+          total_records: results.reduce((s, r) => s + r.records_count, 0),
+        },
         supervisors: results,
       },
     });

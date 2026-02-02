@@ -84,6 +84,7 @@ export default function EquipmentPricingPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isManagerReadOnly) return; // منع أي حفظ من واجهة المدير
     saveMutation.mutate(pricing);
   };
 
@@ -147,6 +148,7 @@ export default function EquipmentPricingPage() {
                   value={pricing.motorcycleBox}
                   onChange={(e) => !isManagerReadOnly && setPricing({ ...pricing, motorcycleBox: parseFloat(e.target.value) || 0 })}
                   readOnly={isManagerReadOnly}
+                  disabled={isManagerReadOnly}
                   className={`w-full px-4 py-2 border rounded-lg text-lg font-semibold ${isManagerReadOnly ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed readonly-price' : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none'}`}
                   min="0"
                   step="0.01"
@@ -170,6 +172,7 @@ export default function EquipmentPricingPage() {
                   value={pricing.bicycleBox}
                   onChange={(e) => !isManagerReadOnly && setPricing({ ...pricing, bicycleBox: parseFloat(e.target.value) || 0 })}
                   readOnly={isManagerReadOnly}
+                  disabled={isManagerReadOnly}
                   className={`w-full px-4 py-2 border rounded-lg text-lg font-semibold ${isManagerReadOnly ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed readonly-price' : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none'}`}
                   min="0"
                   step="0.01"
@@ -193,6 +196,7 @@ export default function EquipmentPricingPage() {
                   value={pricing.tshirt}
                   onChange={(e) => !isManagerReadOnly && setPricing({ ...pricing, tshirt: parseFloat(e.target.value) || 0 })}
                   readOnly={isManagerReadOnly}
+                  disabled={isManagerReadOnly}
                   className={`w-full px-4 py-2 border rounded-lg text-lg font-semibold ${isManagerReadOnly ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed readonly-price' : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none'}`}
                   min="0"
                   step="0.01"
@@ -216,6 +220,7 @@ export default function EquipmentPricingPage() {
                   value={pricing.jacket}
                   onChange={(e) => !isManagerReadOnly && setPricing({ ...pricing, jacket: parseFloat(e.target.value) || 0 })}
                   readOnly={isManagerReadOnly}
+                  disabled={isManagerReadOnly}
                   className={`w-full px-4 py-2 border rounded-lg text-lg font-semibold ${isManagerReadOnly ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed readonly-price' : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none'}`}
                   min="0"
                   step="0.01"
@@ -239,6 +244,7 @@ export default function EquipmentPricingPage() {
                   value={pricing.helmet}
                   onChange={(e) => !isManagerReadOnly && setPricing({ ...pricing, helmet: parseFloat(e.target.value) || 0 })}
                   readOnly={isManagerReadOnly}
+                  disabled={isManagerReadOnly}
                   className={`w-full px-4 py-2 border rounded-lg text-lg font-semibold ${isManagerReadOnly ? 'border-gray-200 bg-gray-50 text-gray-700 cursor-not-allowed readonly-price' : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none'}`}
                   min="0"
                   step="0.01"

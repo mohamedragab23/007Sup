@@ -69,19 +69,38 @@ export default function EquipmentLimitsPage() {
     },
   });
 
-  const handleChange = (code: string, field: keyof SupervisorLimits, value: number) => {
+  const defaultLimitsRow: SupervisorLimits = { motorcycleBox: 0, bicycleBox: 0, tshirt: 0, jacket: 0, helmet: 0 };
+
+  const handleChange = (code: string, field: keyof SupervisorLimits, raw: string) => {
+    const value = Math.max(0, Math.floor(Number(raw)) || 0);
     setLocalLimits((prev) => ({
       ...prev,
       [code]: {
-        ...(prev[code] || { motorcycleBox: 0, bicycleBox: 0, tshirt: 0, jacket: 0, helmet: 0 }),
-        [field]: Math.max(0, value),
+        ...(prev[code] || defaultLimitsRow),
+        [field]: value,
       },
     }));
   };
 
+  const safeNum = (n: number | undefined): number => {
+    const v = Number(n);
+    return (v >= 0 && !Number.isNaN(v)) ? Math.floor(v) : 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveMutation.mutate(localLimits);
+    const toSend: Record<string, SupervisorLimits> = {};
+    supervisors.forEach((sup) => {
+      const limits = localLimits[sup.code] ?? sup.limits;
+      toSend[sup.code] = {
+        motorcycleBox: safeNum(limits.motorcycleBox),
+        bicycleBox: safeNum(limits.bicycleBox),
+        tshirt: safeNum(limits.tshirt),
+        jacket: safeNum(limits.jacket),
+        helmet: safeNum(limits.helmet),
+      };
+    });
+    saveMutation.mutate(toSend);
   };
 
   const supervisors = data?.supervisors ?? [];
@@ -134,45 +153,50 @@ export default function EquipmentLimitsPage() {
                         <input
                           type="number"
                           min={0}
-                          value={limits.motorcycleBox}
-                          onChange={(e) => handleChange(sup.code, 'motorcycleBox', parseInt(e.target.value, 10) || 0)}
+                          value={safeNum(limits.motorcycleBox)}
+                          onChange={(e) => handleChange(sup.code, 'motorcycleBox', e.target.value)}
                           className="w-full max-w-[5rem] mx-auto block px-2 py-1.5 border border-gray-300 rounded text-center"
+                          aria-label={`حد صندوق دراجة نارية لـ ${sup.name}`}
                         />
                       </td>
                       <td className="p-2">
                         <input
                           type="number"
                           min={0}
-                          value={limits.bicycleBox}
-                          onChange={(e) => handleChange(sup.code, 'bicycleBox', parseInt(e.target.value, 10) || 0)}
+                          value={safeNum(limits.bicycleBox)}
+                          onChange={(e) => handleChange(sup.code, 'bicycleBox', e.target.value)}
                           className="w-full max-w-[5rem] mx-auto block px-2 py-1.5 border border-gray-300 rounded text-center"
+                          aria-label={`حد صندوق دراجة هوائية لـ ${sup.name}`}
                         />
                       </td>
                       <td className="p-2">
                         <input
                           type="number"
                           min={0}
-                          value={limits.tshirt}
-                          onChange={(e) => handleChange(sup.code, 'tshirt', parseInt(e.target.value, 10) || 0)}
+                          value={safeNum(limits.tshirt)}
+                          onChange={(e) => handleChange(sup.code, 'tshirt', e.target.value)}
                           className="w-full max-w-[5rem] mx-auto block px-2 py-1.5 border border-gray-300 rounded text-center"
+                          aria-label={`حد تيشرت لـ ${sup.name}`}
                         />
                       </td>
                       <td className="p-2">
                         <input
                           type="number"
                           min={0}
-                          value={limits.jacket}
-                          onChange={(e) => handleChange(sup.code, 'jacket', parseInt(e.target.value, 10) || 0)}
+                          value={safeNum(limits.jacket)}
+                          onChange={(e) => handleChange(sup.code, 'jacket', e.target.value)}
                           className="w-full max-w-[5rem] mx-auto block px-2 py-1.5 border border-gray-300 rounded text-center"
+                          aria-label={`حد جاكت لـ ${sup.name}`}
                         />
                       </td>
                       <td className="p-2">
                         <input
                           type="number"
                           min={0}
-                          value={limits.helmet}
-                          onChange={(e) => handleChange(sup.code, 'helmet', parseInt(e.target.value, 10) || 0)}
+                          value={safeNum(limits.helmet)}
+                          onChange={(e) => handleChange(sup.code, 'helmet', e.target.value)}
                           className="w-full max-w-[5rem] mx-auto block px-2 py-1.5 border border-gray-300 rounded text-center"
+                          aria-label={`حد خوذة لـ ${sup.name}`}
                         />
                       </td>
                     </tr>
