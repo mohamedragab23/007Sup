@@ -334,18 +334,43 @@ async function getSecurityInquiriesCost(supervisorCode: string, startDate: Date,
   }
 }
 
-// Get equipment pricing from local file or defaults
+// Get equipment pricing from Google Sheets (Vercel) or local file or defaults
 async function getEquipmentPricing() {
+  const defaults = {
+    motorcycleBox: 550,
+    bicycleBox: 550,
+    tshirt: 100,
+    jacket: 200,
+    helmet: 150,
+  };
+
+  try {
+    const { getSheetData } = await import('./googleSheets');
+    const data = await getSheetData('أسعار_المعدات', true);
+    if (data && data.length >= 2 && data[1] && data[1].length >= 5) {
+      const row = data[1];
+      const pricing = {
+        motorcycleBox: Number(row[0]) >= 0 ? Number(row[0]) : defaults.motorcycleBox,
+        bicycleBox: Number(row[1]) >= 0 ? Number(row[1]) : defaults.bicycleBox,
+        tshirt: Number(row[2]) >= 0 ? Number(row[2]) : defaults.tshirt,
+        jacket: Number(row[3]) >= 0 ? Number(row[3]) : defaults.jacket,
+        helmet: Number(row[4]) >= 0 ? Number(row[4]) : defaults.helmet,
+      };
+      console.log('[Salary] Equipment pricing loaded from Google Sheets:', pricing);
+      return pricing;
+    }
+  } catch (e) {
+    console.log('[Salary] Equipment pricing from Sheets failed, trying local file:', e);
+  }
+
   try {
     const fs = await import('fs');
     const path = await import('path');
     const localFile = path.join(process.cwd(), 'data', 'equipment-pricing.json');
-    
     if (fs.existsSync(localFile)) {
       const data = fs.readFileSync(localFile, 'utf-8');
       const pricing = JSON.parse(data);
       console.log('[Salary] Equipment pricing loaded from file:', pricing);
-      // Use exact values from file - don't default to non-zero if value is 0
       return {
         motorcycleBox: typeof pricing.motorcycleBox === 'number' ? pricing.motorcycleBox : 550,
         bicycleBox: typeof pricing.bicycleBox === 'number' ? pricing.bicycleBox : 550,
@@ -357,14 +382,8 @@ async function getEquipmentPricing() {
   } catch (error) {
     console.log('[Salary] Equipment pricing file not found, using defaults:', error);
   }
-  // Default pricing
-  return {
-    motorcycleBox: 550,
-    bicycleBox: 550,
-    tshirt: 100,
-    jacket: 200,
-    helmet: 150,
-  };
+
+  return defaults;
 }
 
 // Equipment details interface
