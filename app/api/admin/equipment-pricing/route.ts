@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Save equipment pricing (مدير لا يمكنه تعديل الأسعار - للإدارة العليا فقط)
+// POST - Save equipment pricing (المدير يمكنه التعديل والتعديلات تظهر للمشرفين عبر نفس الملف)
 export async function POST(request: NextRequest) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -107,11 +107,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'غير مصرح' }, { status: 401 });
     }
 
-    // منع المدير من تعديل الأسعار - الأسعار للقراءة فقط في واجهة المدير
-    return NextResponse.json(
-      { success: false, error: 'لا يمكن للمدير تعديل الأسعار. الأسعار محددة من قبل الإدارة العليا.' },
-      { status: 403 }
-    );
+    const pricing: EquipmentPricing = await request.json();
+
+    if (
+      pricing.motorcycleBox < 0 ||
+      pricing.bicycleBox < 0 ||
+      pricing.tshirt < 0 ||
+      pricing.jacket < 0 ||
+      pricing.helmet < 0
+    ) {
+      return NextResponse.json({ success: false, error: 'الأسعار يجب أن تكون موجبة' }, { status: 400 });
+    }
+
+    const saved = saveLocalPricing(pricing);
+    if (saved) {
+      return NextResponse.json({ success: true, message: 'تم حفظ الأسعار بنجاح. التعديلات تظهر للمشرفين تلقائياً.' });
+    }
+    return NextResponse.json({ success: false, error: 'فشل حفظ الأسعار' }, { status: 500 });
   } catch (error: any) {
     console.error('Save equipment pricing error:', error);
     return NextResponse.json({ success: false, error: error.message || 'حدث خطأ' }, { status: 500 });
