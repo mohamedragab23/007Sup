@@ -265,7 +265,7 @@ export default function SupervisorPerformancePage() {
             {supervisors.length === 0 && (
               <p className="text-gray-500 text-center py-8">لا توجد بيانات أداء للمشرفين في هذه الفترة.</p>
             )}
-          </div>
+          </>
         )}
 
         {!data && !error && requestRange && !loading && (
