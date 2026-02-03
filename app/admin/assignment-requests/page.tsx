@@ -18,6 +18,8 @@ interface AssignmentRequest {
 
 export default function AssignmentRequestsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: requests, isLoading, refetch } = useQuery({
@@ -114,6 +116,88 @@ export default function AssignmentRequestsPage() {
   const approvedRequests = requests?.filter((r) => r.status === 'approved') || [];
   const rejectedRequests = requests?.filter((r) => r.status === 'rejected') || [];
 
+  const pendingIds = new Set(pendingRequests.map((r) => r.id));
+  const selectedPending = selectedIds.size > 0 && Array.from(selectedIds).some((id) => pendingIds.has(id));
+  const isAllPendingSelected =
+    pendingRequests.length > 0 &&
+    pendingRequests.every((r) => selectedIds.has(r.id));
+
+  const toggleSelectAll = () => {
+    if (isAllPendingSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pendingRequests.map((r) => r.id)));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkApprove = async () => {
+    const ids = Array.from(selectedIds).filter((id) => pendingIds.has(id));
+    if (ids.length === 0) return;
+    if (!confirm(`موافقة على ${ids.length} طلب تعيين؟`)) return;
+    setBulkLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      for (const requestId of ids) {
+        const res = await fetch('/api/assignment-requests', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ requestId, action: 'approve' }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'فشل الموافقة');
+      }
+      setSelectedIds(new Set());
+      queryClient.removeQueries({ queryKey: ['assignment-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-requests', 'pending'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'riders'] });
+      queryClient.invalidateQueries({ queryKey: ['riders'] });
+      queryClient.invalidateQueries({ queryKey: ['supervisor-riders'] });
+      setTimeout(() => queryClient.refetchQueries({ queryKey: ['assignment-requests'] }), 500);
+      alert(`✅ تمت الموافقة على ${ids.length} طلب بنجاح.`);
+    } catch (e: any) {
+      alert(`❌ خطأ: ${e.message || 'فشل تنفيذ الموافقة'}`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    const ids = Array.from(selectedIds).filter((id) => pendingIds.has(id));
+    if (ids.length === 0) return;
+    if (!confirm(`رفض ${ids.length} طلب؟`)) return;
+    setBulkLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      for (const requestId of ids) {
+        const res = await fetch('/api/assignment-requests', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ requestId, action: 'reject' }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'فشل الرفض');
+      }
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['assignment-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['assignment-requests', 'pending'] });
+      alert(`✅ تم رفض ${ids.length} طلب.`);
+    } catch (e: any) {
+      alert(`❌ خطأ: ${e.message || 'فشل تنفيذ الرفض'}`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -176,10 +260,51 @@ export default function AssignmentRequestsPage() {
           </div>
         ) : requests && requests.length > 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            {selectedPending && (
+              <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100 bg-gray-50">
+                <span className="text-sm font-medium text-gray-700">
+                  تم تحديد {Array.from(selectedIds).filter((id) => pendingIds.has(id)).length} طلب
+                </span>
+                <button
+                  type="button"
+                  onClick={handleBulkApprove}
+                  disabled={bulkLoading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                >
+                  {bulkLoading ? 'جاري التنفيذ...' : 'موافقة على المحدد'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkReject}
+                  disabled={bulkLoading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  رفض المحدد
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
+                >
+                  إلغاء التحديد
+                </button>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
+                    {pendingRequests.length > 0 && (
+                      <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700 w-12">
+                        <input
+                          type="checkbox"
+                          checked={isAllPendingSelected}
+                          onChange={toggleSelectAll}
+                          className="rounded border-gray-300"
+                          title="تحديد الكل"
+                        />
+                      </th>
+                    )}
                     <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">المشرف</th>
                     <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">المندوب</th>
                     <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">تاريخ الطلب</th>
@@ -190,6 +315,20 @@ export default function AssignmentRequestsPage() {
                 <tbody className="divide-y divide-gray-200">
                   {requests.map((request) => (
                     <tr key={request.id} className="hover:bg-gray-50">
+                      {pendingRequests.length > 0 && (
+                        <td className="py-4 px-6 text-sm w-12">
+                          {request.status === 'pending' ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(request.id)}
+                              onChange={() => toggleSelect(request.id)}
+                              className="rounded border-gray-300"
+                            />
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="py-4 px-6 text-sm">
                         <div>
                           <p className="font-medium text-gray-800">{request.supervisorName}</p>

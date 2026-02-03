@@ -22,6 +22,11 @@ export default function TerminationRequestsPage() {
   const [approvalModal, setApprovalModal] = useState<{ show: boolean; requestId: number; riderCode: string; riderName: string } | null>(null);
   const [newSupervisorCode, setNewSupervisorCode] = useState<string>('');
   const [deleteRider, setDeleteRider] = useState<boolean>(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkApprovalOpen, setBulkApprovalOpen] = useState(false);
+  const [bulkNewSupervisorCode, setBulkNewSupervisorCode] = useState('');
+  const [bulkDeleteRider, setBulkDeleteRider] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: requests, isLoading, refetch } = useQuery({
@@ -132,6 +137,94 @@ export default function TerminationRequestsPage() {
   const approvedRequests = requests?.filter((r) => r.status === 'approved') || [];
   const rejectedRequests = requests?.filter((r) => r.status === 'rejected') || [];
 
+  const pendingIds = new Set(pendingRequests.map((r) => r.id));
+  const selectedPending = selectedIds.size > 0 && Array.from(selectedIds).some((id) => pendingIds.has(id));
+  const isAllPendingSelected =
+    pendingRequests.length > 0 &&
+    pendingRequests.every((r) => selectedIds.has(r.id));
+
+  const toggleSelectAll = () => {
+    if (isAllPendingSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pendingRequests.map((r) => r.id)));
+    }
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkApproveWithOptions = async (newSupervisorCode: string, deleteRider: boolean) => {
+    const ids = Array.from(selectedIds).filter((id) => pendingIds.has(id));
+    if (ids.length === 0) return;
+    if (deleteRider && !confirm(`⚠️ هل أنت متأكد من حذف ${ids.length} مندوب تماماً من النظام؟ لا يمكن التراجع عن هذا الإجراء.`)) return;
+    setBulkLoading(true);
+    setBulkApprovalOpen(false);
+    try {
+      const token = localStorage.getItem('token');
+      for (const requestId of ids) {
+        const res = await fetch('/api/termination-requests', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            requestId,
+            action: 'approve',
+            newSupervisorCode: newSupervisorCode || undefined,
+            deleteRider: !!deleteRider,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'فشل الموافقة');
+      }
+      setSelectedIds(new Set());
+      setBulkNewSupervisorCode('');
+      setBulkDeleteRider(false);
+      queryClient.removeQueries({ queryKey: ['termination-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['termination-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'riders'] });
+      queryClient.invalidateQueries({ queryKey: ['riders'] });
+      queryClient.invalidateQueries({ queryKey: ['supervisor-riders'] });
+      setTimeout(() => queryClient.refetchQueries({ queryKey: ['termination-requests'] }), 500);
+      alert(`✅ تمت الموافقة على ${ids.length} طلب بنجاح.`);
+    } catch (e: any) {
+      alert(`❌ خطأ: ${e.message || 'فشل تنفيذ الموافقة'}`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkReject = async () => {
+    const ids = Array.from(selectedIds).filter((id) => pendingIds.has(id));
+    if (ids.length === 0) return;
+    if (!confirm(`رفض ${ids.length} طلب؟`)) return;
+    setBulkLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      for (const requestId of ids) {
+        const res = await fetch('/api/termination-requests', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ requestId, action: 'reject' }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'فشل الرفض');
+      }
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['termination-requests'] });
+      alert(`✅ تم رفض ${ids.length} طلب.`);
+    } catch (e: any) {
+      alert(`❌ خطأ: ${e.message || 'فشل تنفيذ الرفض'}`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -194,10 +287,55 @@ export default function TerminationRequestsPage() {
           </div>
         ) : requests && requests.length > 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            {selectedPending && (
+              <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100 bg-gray-50">
+                <span className="text-sm font-medium text-gray-700">
+                  تم تحديد {Array.from(selectedIds).filter((id) => pendingIds.has(id)).length} طلب
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkNewSupervisorCode('');
+                    setBulkDeleteRider(false);
+                    setBulkApprovalOpen(true);
+                  }}
+                  disabled={bulkLoading}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+                >
+                  {bulkLoading ? 'جاري التنفيذ...' : 'موافقة على المحدد'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkReject}
+                  disabled={bulkLoading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                >
+                  رفض المحدد
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
+                >
+                  إلغاء التحديد
+                </button>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
                   <tr>
+                    {pendingRequests.length > 0 && (
+                      <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700 w-12">
+                        <input
+                          type="checkbox"
+                          checked={isAllPendingSelected}
+                          onChange={toggleSelectAll}
+                          className="rounded border-gray-300"
+                          title="تحديد الكل"
+                        />
+                      </th>
+                    )}
                     <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">المشرف</th>
                     <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">المندوب</th>
                     <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">السبب</th>
@@ -209,6 +347,20 @@ export default function TerminationRequestsPage() {
                 <tbody className="divide-y divide-gray-200">
                   {requests.map((request) => (
                     <tr key={request.id} className="hover:bg-gray-50">
+                      {pendingRequests.length > 0 && (
+                        <td className="py-4 px-6 text-sm w-12">
+                          {request.status === 'pending' ? (
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(request.id)}
+                              onChange={() => toggleSelect(request.id)}
+                              className="rounded border-gray-300"
+                            />
+                          ) : (
+                            <span className="text-gray-300">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="py-4 px-6 text-sm">
                         <div>
                           <p className="font-medium text-gray-800">{request.supervisorName}</p>
@@ -303,7 +455,99 @@ export default function TerminationRequestsPage() {
           </div>
         )}
 
-        {/* Approval Modal */}
+        {/* Bulk Approval Modal - نفس آلية الموافقة الفردية */}
+        {bulkApprovalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">
+                موافقة على الطلبات المحددة ({Array.from(selectedIds).filter((id) => pendingIds.has(id)).length} طلب)
+              </h3>
+              <p className="text-gray-600 mb-4">اختر نوع الموافقة المطبقة على جميع الطلبات المحددة:</p>
+              <div className="space-y-4">
+                <label className="flex items-center mb-2">
+                  <input
+                    type="radio"
+                    name="bulk-approval-action"
+                    checked={!bulkDeleteRider && !bulkNewSupervisorCode}
+                    onChange={() => {
+                      setBulkDeleteRider(false);
+                      setBulkNewSupervisorCode('');
+                    }}
+                    className="mr-2"
+                  />
+                  <span>إزالة التعيين فقط (يبقى المندوب في النظام بدون مشرف)</span>
+                </label>
+                <div>
+                  <label className="flex items-center mb-2">
+                    <input
+                      type="radio"
+                      name="bulk-approval-action"
+                      checked={!!bulkNewSupervisorCode && !bulkDeleteRider}
+                      onChange={() => setBulkDeleteRider(false)}
+                      className="mr-2"
+                    />
+                    <span>تعيين المناديب لمشرف آخر</span>
+                  </label>
+                  <select
+                    value={bulkNewSupervisorCode}
+                    onChange={(e) => {
+                      setBulkNewSupervisorCode(e.target.value);
+                      setBulkDeleteRider(false);
+                    }}
+                    className="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  >
+                    <option value="">اختر المشرف</option>
+                    {supervisors.map((s: any, index: number) => (
+                      <option key={`bulk-sup-${s.code}-${index}`} value={s.code}>
+                        {s.name} ({s.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className="flex items-center mb-2">
+                  <input
+                    type="radio"
+                    name="bulk-approval-action"
+                    checked={bulkDeleteRider}
+                    onChange={() => {
+                      setBulkDeleteRider(true);
+                      setBulkNewSupervisorCode('');
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-red-600">حذف المناديب تماماً من النظام</span>
+                </label>
+              </div>
+              <div className="flex gap-4 mt-6">
+                <button
+                  onClick={() => {
+                    if (bulkDeleteRider) {
+                      if (!confirm('⚠️ هل أنت متأكد من حذف المناديب المحددين تماماً من النظام؟ لا يمكن التراجع عنه.')) return;
+                    }
+                    handleBulkApproveWithOptions(bulkNewSupervisorCode, bulkDeleteRider);
+                  }}
+                  disabled={bulkLoading}
+                  className="flex-1 bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {bulkLoading ? 'جاري...' : 'تأكيد الموافقة'}
+                </button>
+                <button
+                  onClick={() => {
+                    setBulkApprovalOpen(false);
+                    setBulkNewSupervisorCode('');
+                    setBulkDeleteRider(false);
+                  }}
+                  disabled={bulkLoading}
+                  className="flex-1 bg-gray-200 text-gray-800 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Approval Modal (طلب واحد) */}
         {approvalModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
