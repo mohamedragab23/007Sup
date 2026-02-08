@@ -619,42 +619,12 @@ export async function bulkAddRiders(riders: Rider[]): Promise<{
       rider.status || 'نشط',
     ];
 
-    // Helper function to check if supervisor code is valid
-    const isValidSupervisorCode = (code: string | undefined | null): boolean => {
-      if (!code) return false;
-      const trimmed = code.toString().trim();
-      if (trimmed === '') return false;
-      // Check for common "unassigned" texts
-      const unassignedTexts = ['لم يتم التعيين', 'غير معروف', 'غير معين', 'لا يوجد', 'unassigned', 'not assigned', 'none'];
-      return !unassignedTexts.some(text => trimmed.toLowerCase().includes(text.toLowerCase()));
-    };
-
-    // Check if rider already exists
+    // Reject duplicate: rider code already exists on system
     if (existingRiderCodes.has(riderCodeTrimmed)) {
-      const existingRider = existingRiderMap.get(riderCodeTrimmed);
-      const existingSupervisorCode = existingRider?.supervisorCode?.trim();
-      const newSupervisorCode = supervisorCodeTrimmed;
-      
-      console.log(`[BulkAdd] Rider ${riderCodeTrimmed} exists. Existing supervisor: "${existingSupervisorCode}", New: "${newSupervisorCode}"`);
-      
-      // If rider exists but has no valid supervisor assigned, allow update
-      if (existingRider && !isValidSupervisorCode(existingSupervisorCode)) {
-        // Find row index in sheet (we'll need to get it from sheet)
-        // For now, we'll add it to update list
-        updateRows.push({ rowIndex: -1, data: riderData }); // Will be handled separately
-        console.log(`[BulkAdd] Rider ${riderCodeTrimmed} exists without supervisor, scheduled for update.`);
-        continue;
-      } else if (existingRider && existingSupervisorCode === newSupervisorCode) {
-        // Same supervisor - skip silently (already assigned correctly)
-        console.log(`[BulkAdd] Rider ${riderCodeTrimmed} already assigned to same supervisor ${newSupervisorCode}, skipping.`);
-        continue;
-      } else if (existingRider && isValidSupervisorCode(existingSupervisorCode)) {
-        // Different valid supervisor - ALLOW REASSIGNMENT (admin wants to reassign)
-        // Add to update list to change supervisor assignment
-        updateRows.push({ rowIndex: -1, data: riderData });
-        console.log(`[BulkAdd] Rider ${riderCodeTrimmed} reassignment: from "${existingSupervisorCode}" to "${newSupervisorCode}", scheduled for update.`);
-        continue;
-      }
+      failed++;
+      errors.push(`المندوب ${riderCodeTrimmed} موجود بالفعل على النظام`);
+      console.log(`[BulkAdd] Rider ${riderCodeTrimmed} already exists on system - rejected (duplicate).`);
+      continue;
     }
 
     // New rider - add to insert list

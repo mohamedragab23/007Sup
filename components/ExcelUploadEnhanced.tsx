@@ -162,14 +162,57 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
         return;
       }
 
-      // Split data into chunks to avoid Vercel 4.5MB limit
-      // Each chunk should be less than 3MB to be safe
-      const CHUNK_SIZE = 50000; // Process 50k rows per chunk
-      const totalChunks = Math.ceil(jsonData.length / CHUNK_SIZE);
-      
       setUploadProgress(50); // Data prepared
 
-      // Process chunks sequentially
+      // Riders: send full file in one request (header must be row 0; chunking would break column detection)
+      if (type === 'riders') {
+        try {
+          const response = await fetch('/api/admin/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ type: 'riders', data: jsonData }),
+          });
+          const data = await response.json();
+          setUploadProgress(100);
+          if (!response.ok) {
+            setResult({
+              success: false,
+              error: data.error || 'فشل رفع الملف',
+              errors: data.errors || [],
+              warnings: data.warnings || [],
+            });
+            onError?.(data.error || 'فشل رفع الملف');
+            return;
+          }
+          setResult({
+            success: data.success !== false,
+            message: data.message || (data.added > 0 ? 'تم الرفع بنجاح' : 'لم تتم إضافة سجلات'),
+            added: data.added ?? 0,
+            failed: data.failed ?? 0,
+            warnings: data.warnings || [],
+            errors: data.errors || [],
+          });
+          onSuccess?.(data);
+          if (data.success !== false && data.added > 0) {
+            setTimeout(() => { setFile(null); setPreview(null); }, 3000);
+          }
+        } catch (err: any) {
+          setUploadProgress(100);
+          const errorMsg = err.message || 'حدث خطأ في الاتصال';
+          setResult({ success: false, error: errorMsg });
+          onError?.(errorMsg);
+        }
+        setUploading(false);
+        setTimeout(() => setUploadProgress(0), 2000);
+        return;
+      }
+
+      // Performance: split into chunks to avoid Vercel 4.5MB limit
+      const CHUNK_SIZE = 50000;
+      const totalChunks = Math.ceil(jsonData.length / CHUNK_SIZE);
       let totalProcessed = 0;
       let allWarnings: string[] = [];
       let lastError: string | null = null;
@@ -186,12 +229,11 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
           chunkIndex,
           totalChunks,
           isLastChunk: chunkIndex === totalChunks - 1,
-          ...(type === 'performance' && performanceDate && performanceDate.trim() !== '' 
-            ? { performanceDate: performanceDate.trim() } 
+          ...(type === 'performance' && performanceDate && performanceDate.trim() !== ''
+            ? { performanceDate: performanceDate.trim() }
             : {}),
         };
 
-        // Calculate progress: 50% + (chunkIndex / totalChunks) * 40%
         const chunkProgress = 50 + Math.floor((chunkIndex / totalChunks) * 40);
         setUploadProgress(chunkProgress);
 
@@ -212,49 +254,39 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
 
           const result = await response.json();
           totalProcessed += result.rows || chunk.length;
-          if (result.warnings) {
-            allWarnings.push(...result.warnings);
-          }
+          if (result.warnings) allWarnings.push(...result.warnings);
 
-          // Small delay between chunks to avoid overwhelming the server
           if (chunkIndex < totalChunks - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
         } catch (chunkError: any) {
           console.error(`[ExcelUpload] Error uploading chunk ${chunkIndex + 1}:`, chunkError);
           lastError = chunkError.message || 'خطأ في رفع جزء من الملف';
-          // Continue with next chunk instead of failing completely
         }
       }
 
-      setUploadProgress(95); // All chunks uploaded
+      setUploadProgress(95);
 
-      // Final response handling
       if (lastError && totalProcessed === 0) {
-        // All chunks failed
         setResult({ success: false, error: lastError });
         onError?.(lastError);
         setUploading(false);
         return;
       }
 
-      // Success (even if some chunks failed, we processed some data)
       const response = {
         success: true,
-        message: totalProcessed > 0 
+        message: totalProcessed > 0
           ? `تم رفع ${totalProcessed} صف بنجاح${totalChunks > 1 ? ` (${totalChunks} دفعة)` : ''}`
           : 'تم معالجة الملف',
         rows: totalProcessed,
-        added: totalProcessed, // For compatibility
+        added: totalProcessed,
         failed: 0,
         warnings: allWarnings,
         errors: [] as string[],
       };
-
-      // Use the response structure
       const data = response;
-
-      setUploadProgress(100); // Complete
+      setUploadProgress(100);
 
       if (data.success) {
         setResult({
@@ -263,25 +295,18 @@ export default function ExcelUploadEnhanced({ type, performanceDate, onSuccess, 
           added: data.added || data.rows || 0,
           failed: data.failed || 0,
           warnings: data.warnings || [],
-          errors: data.errors || [], // Include errors even if success is true
+          errors: data.errors || [],
         });
         onSuccess?.(data);
-        // Clear file after short delay to show success message
-        setTimeout(() => {
-          setFile(null);
-          setPreview(null);
-        }, 3000);
+        setTimeout(() => { setFile(null); setPreview(null); }, 3000);
       } else {
-        // This should not happen since we set success: true above
-        // But handle it just in case
-        const errorMsg = 'فشل رفع الملف';
-        setResult({ 
-          success: false, 
-          error: errorMsg, 
+        setResult({
+          success: false,
+          error: 'فشل رفع الملف',
           errors: data.errors || [],
           warnings: data.warnings || [],
         });
-        onError?.(errorMsg);
+        onError?.('فشل رفع الملف');
       }
     } catch (error: any) {
       setUploadProgress(100);
