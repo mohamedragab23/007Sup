@@ -9,6 +9,8 @@ export default function AdminDebugPage() {
   const [supervisorCode, setSupervisorCode] = useState('');
   const [startDate, setStartDate] = useState('2023-11-14');
   const [endDate, setEndDate] = useState('2023-11-15');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetResult, setResetResult] = useState<any>(null);
 
   const { data: debugData, isLoading, refetch } = useQuery({
     queryKey: ['admin', 'debug', action, supervisorCode, startDate, endDate],
@@ -27,12 +29,103 @@ export default function AdminDebugPage() {
     enabled: action === 'performance' || (action === 'supervisor' && !!supervisorCode),
   });
 
+  const runSystemReset = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('❌ لم يتم العثور على رمز الدخول. يرجى تسجيل الدخول مرة أخرى.');
+      return;
+    }
+
+    const firstConfirm = confirm(
+      '⚠️ تهيئة النظام ستقوم بتصفير البيانات التشغيلية (المناديب/الأداء/الطلبات/الديون/الخصومات...). هل تريد المتابعة؟'
+    );
+    if (!firstConfirm) return;
+
+    const secondConfirm = confirm(
+      '⚠️ تأكيد أخير: سيتم حذف كل البيانات التشغيلية من Google Sheets مع إبقاء صف العناوين (Headers). لا يمكن التراجع.'
+    );
+    if (!secondConfirm) return;
+
+    setResetLoading(true);
+    setResetResult(null);
+    try {
+      const res = await fetch('/api/admin/system/reset', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ target: 'all', keepHeaderRow: true }),
+      });
+
+      const data = await res.json();
+      setResetResult(data);
+
+      if (data?.success) {
+        alert(`✅ ${data.message || 'تمت التهيئة بنجاح'}`);
+      } else {
+        alert(`⚠️ ${data?.error || data?.message || 'فشل/تمت جزئياً'}`);
+      }
+    } catch (e: any) {
+      alert(`❌ حدث خطأ أثناء التهيئة: ${e?.message || 'خطأ غير معروف'}`);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">🔍 التحقق من البيانات</h1>
           <p className="text-gray-600">فحص البيانات في Google Sheets والتحقق من الفلترة</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-red-200">
+          <div className="flex items-start justify-between gap-4 flex-col sm:flex-row">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-red-700">🧹 تهيئة النظام (كأنه أول مرة)</h2>
+              <p className="text-sm text-gray-700">
+                يقوم هذا الإجراء بتصفير البيانات التشغيلية في Google Sheets (مع إبقاء صف العناوين)، ثم تنظيف الكاش حتى
+                يبدأ النظام باستقبال بيانات جديدة بدون تغيير الأكواد.
+              </p>
+              <div className="text-xs text-gray-600">
+                سيتم تصفير: <span className="font-mono">المناديب، البيانات اليومية، طلبات_التعيين، طلبات_الإقالة، الديون/المديونية، الخصومات، السلف، المعدات</span>
+              </div>
+            </div>
+            <button
+              onClick={runSystemReset}
+              disabled={resetLoading}
+              className={`px-4 py-2 rounded-lg font-medium text-white transition-colors ${
+                resetLoading ? 'bg-red-300 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
+              }`}
+            >
+              {resetLoading ? 'جاري التهيئة...' : 'تصفير البيانات التشغيلية'}
+            </button>
+          </div>
+
+          {resetResult && (
+            <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className={`text-sm font-semibold ${resetResult.success ? 'text-green-700' : 'text-yellow-700'}`}>
+                  {resetResult.success ? '✅ تمت التهيئة' : '⚠️ تمت جزئياً'}
+                </span>
+                {resetResult.message && <span className="text-sm text-gray-700">{resetResult.message}</span>}
+              </div>
+              <div className="mt-2 text-xs text-gray-700 space-y-1">
+                {Array.isArray(resetResult.clearedSheets) && resetResult.clearedSheets.length > 0 && (
+                  <div>
+                    <span className="font-semibold">تم تصفير:</span> {resetResult.clearedSheets.join('، ')}
+                  </div>
+                )}
+                {Array.isArray(resetResult.failedSheets) && resetResult.failedSheets.length > 0 && (
+                  <div>
+                    <span className="font-semibold">لم يتم تصفير:</span> {resetResult.failedSheets.join('، ')}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
