@@ -1,16 +1,43 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { useQuery } from '@tanstack/react-query';
 
 export default function AdminDebugPage() {
+  const router = useRouter();
+  const [adminOk, setAdminOk] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [action, setAction] = useState<'performance' | 'supervisor'>('performance');
   const [supervisorCode, setSupervisorCode] = useState('');
   const [startDate, setStartDate] = useState('2023-11-14');
   const [endDate, setEndDate] = useState('2023-11-15');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetResult, setResetResult] = useState<any>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    if (!token || !userStr) {
+      router.replace('/');
+      setAuthChecked(true);
+      return;
+    }
+    try {
+      const u = JSON.parse(userStr) as { role?: string };
+      if (u.role !== 'admin') {
+        router.replace('/dashboard');
+        setAuthChecked(true);
+        return;
+      }
+      setAdminOk(true);
+    } catch {
+      router.replace('/');
+    } finally {
+      setAuthChecked(true);
+    }
+  }, [router]);
 
   const { data: debugData, isLoading, refetch } = useQuery({
     queryKey: ['admin', 'debug', action, supervisorCode, startDate, endDate],
@@ -26,7 +53,8 @@ export default function AdminDebugPage() {
       const data = await res.json();
       return data;
     },
-    enabled: action === 'performance' || (action === 'supervisor' && !!supervisorCode),
+    enabled:
+      adminOk && (action === 'performance' || (action === 'supervisor' && !!supervisorCode)),
   });
 
   const runSystemReset = async () => {
@@ -72,6 +100,17 @@ export default function AdminDebugPage() {
       setResetLoading(false);
     }
   };
+
+  if (!authChecked || !adminOk) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center text-gray-600">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-3" />
+          <p>جاري التحقق من الصلاحيات...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Layout>

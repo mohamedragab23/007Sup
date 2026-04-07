@@ -46,7 +46,6 @@ export default function Layout({ children }: LayoutProps) {
 
   const getMenuItems = () => {
     if (user?.role === 'admin') {
-      // Removed: المزامنة, رفع الملفات, التحقق من البيانات (backend preserved)
       return [
         { href: '/admin/dashboard', label: 'لوحة التحكم', icon: '📊' },
         { href: '/admin/supervisors', label: 'إدارة المشرفين', icon: '👔' },
@@ -59,6 +58,7 @@ export default function Layout({ children }: LayoutProps) {
         { href: '/admin/equipment-pricing', label: 'أسعار المعدات', icon: '🛠️' },
         { href: '/admin/equipment-limits', label: 'حدود خصم المعدات', icon: '📦' },
         { href: '/admin/salaries', label: 'حساب الرواتب', icon: '💰' },
+        { href: '/admin/debug', label: 'تهيئة النظام والتحقق', icon: '🧹' },
       ];
     } else {
       // Supervisor menu - Reports tab removed as per requirements

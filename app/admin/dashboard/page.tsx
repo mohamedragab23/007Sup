@@ -200,6 +200,15 @@ export default function AdminDashboardPage() {
                 <div className="font-semibold text-purple-800">رفع الملفات</div>
                 <div className="text-sm text-purple-600">رفع بيانات Excel</div>
               </a>
+              <a
+                href="/admin/debug"
+                className="block p-4 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100"
+              >
+                <div className="font-semibold text-red-800">تهيئة النظام والتحقق</div>
+                <div className="text-sm text-red-700">
+                  تصفير بيانات التشغيل في Google Sheets (للمدير فقط) وفحص البيانات
+                </div>
+              </a>
             </div>
           </div>
 
