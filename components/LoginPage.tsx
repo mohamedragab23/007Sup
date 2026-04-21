@@ -53,7 +53,7 @@ export default function LoginPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">
             نظام إدارة المشرفين
           </h1>
-          <p className="text-gray-600 text-sm sm:text-base break-words">007 للخدمات اللوجستية</p>
+          <p className="text-gray-600 text-sm sm:text-base break-words">Wakeel Team</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">

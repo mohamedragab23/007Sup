@@ -31,12 +31,30 @@ export default function Layout({ children }: LayoutProps) {
 
     if (userStr) {
       try {
-        setUser(JSON.parse(userStr));
+        const parsedUser = JSON.parse(userStr) as User;
+        setUser(parsedUser);
+
+        // Guard admin routes: if user isn't admin, force re-login.
+        if (pathname?.startsWith('/admin') && parsedUser?.role !== 'admin') {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          router.push('/');
+          return;
+        }
       } catch (e) {
         console.error('Error parsing user data');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        router.push('/');
+      }
+    } else {
+      // If we have a token but no user payload, avoid ambiguous access.
+      if (pathname?.startsWith('/admin')) {
+        localStorage.removeItem('token');
+        router.push('/');
       }
     }
-  }, [router]);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -100,7 +118,7 @@ export default function Layout({ children }: LayoutProps) {
         >
           <div className="h-full flex flex-col">
             <div className="p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-800">007 للخدمات</h2>
+              <h2 className="text-2xl font-bold text-gray-800">Wakeel Team</h2>
               <p className="text-sm text-gray-600 mt-1">{user?.name || 'المستخدم'}</p>
             </div>
 

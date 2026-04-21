@@ -35,11 +35,19 @@ export default function AdminSupervisorsPage() {
     queryKey: ['admin', 'supervisors'],
     queryFn: async () => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('غير مصرح - يرجى تسجيل الدخول');
+      }
       // Add timestamp to force fresh fetch
       const res = await fetch(`/api/admin/supervisors?refresh=true&_t=${Date.now()}`, {
         headers: { Authorization: `Bearer ${token}` },
         cache: 'no-store', // Don't cache the request
       });
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        throw new Error('انتهت الجلسة أو لا تملك صلاحية الأدمن. يرجى تسجيل الدخول مرة أخرى.');
+      }
       const data = await res.json();
       console.log('[AdminSupervisorsPage] Fetched supervisors:', data.data?.length || 0);
       return data.success ? data.data : [];
@@ -53,6 +61,9 @@ export default function AdminSupervisorsPage() {
   const addMutation = useMutation({
     mutationFn: async (supervisor: Supervisor) => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('غير مصرح - يرجى تسجيل الدخول');
+      }
       const res = await fetch('/api/admin/supervisors', {
         method: 'POST',
         headers: {
@@ -61,6 +72,11 @@ export default function AdminSupervisorsPage() {
         },
         body: JSON.stringify(supervisor),
       });
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        throw new Error('غير مصرح. يرجى تسجيل الدخول كأدمن.');
+      }
       const data = await res.json();
       if (!data.success) {
         throw new Error(data.error || 'فشل إضافة المشرف');
@@ -88,6 +104,9 @@ export default function AdminSupervisorsPage() {
   const updateMutation = useMutation({
     mutationFn: async ({ code, updates }: { code: string; updates: Partial<Supervisor> }) => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('غير مصرح - يرجى تسجيل الدخول');
+      }
       const res = await fetch('/api/admin/supervisors', {
         method: 'PUT',
         headers: {
@@ -96,6 +115,11 @@ export default function AdminSupervisorsPage() {
         },
         body: JSON.stringify({ code, ...updates }),
       });
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        throw new Error('غير مصرح. يرجى تسجيل الدخول كأدمن.');
+      }
       return res.json();
     },
     onSuccess: async () => {
@@ -113,10 +137,18 @@ export default function AdminSupervisorsPage() {
   const deleteMutation = useMutation({
     mutationFn: async (code: string) => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('غير مصرح - يرجى تسجيل الدخول');
+      }
       const res = await fetch(`/api/admin/supervisors?code=${code}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        throw new Error('غير مصرح. يرجى تسجيل الدخول كأدمن.');
+      }
       const data = await res.json();
       if (!data.success) {
         throw new Error(data.error || 'فشل حذف المشرف');

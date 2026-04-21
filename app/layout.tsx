@@ -4,7 +4,7 @@ import ErrorBoundaryWrapper from '@/components/ErrorBoundaryWrapper';
 import QueryProvider from '@/lib/providers/QueryProvider';
 
 export const metadata: Metadata = {
-  title: 'نظام إدارة المشرفين - 007 للخدمات اللوجستية',
+  title: 'نظام إدارة المشرفين - Wakeel Team',
   description: 'نظام إدارة شامل للمشرفين والمناديب',
 };
 

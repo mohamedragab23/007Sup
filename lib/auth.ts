@@ -83,15 +83,50 @@ export async function authenticateSupervisor(code: string, password: string): Pr
 // Authenticate admin
 export async function authenticateAdmin(code: string, password: string): Promise<AuthResult> {
   try {
-    let adminsData = await getSheetData('Admins');
+    const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+    const serviceEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+    const privateKey = process.env.GOOGLE_PRIVATE_KEY;
 
-    // If Admins sheet doesn't exist, create it with default admin
-    if (adminsData.length === 0) {
-      // Note: In production, you'd want to create the sheet programmatically
-      // For now, we'll return an error asking to create it manually
+    // Fail fast with a clear message if Google Sheets env is missing in the runtime (common on Vercel).
+    if (!spreadsheetId || !serviceEmail || !privateKey) {
+      const missing: string[] = [];
+      if (!spreadsheetId) missing.push('GOOGLE_SHEETS_SPREADSHEET_ID');
+      if (!serviceEmail) missing.push('GOOGLE_SERVICE_ACCOUNT_EMAIL');
+      if (!privateKey) missing.push('GOOGLE_PRIVATE_KEY');
+
       return {
         success: false,
-        error: 'ورقة الأدمن غير موجودة. يرجى إنشاؤها يدوياً في Google Sheets',
+        error:
+          'إعدادات Google Sheets ناقصة على السيرفر. المتغيرات المفقودة: ' +
+          missing.join(', ') +
+          '. قم بإضافتها في Vercel Environment Variables ثم أعد النشر.',
+      };
+    }
+
+    // Be tolerant to common Admins sheet naming differences.
+    // Note: getSheetData returns [] on *any* read error (missing sheet, wrong spreadsheet ID,
+    // missing permissions, invalid service account key, etc).
+    const adminSheetCandidates = ['Admins', 'Admin', 'admins', 'admin', 'الأدمن', 'الادمن'];
+    let adminsData: any[][] = [];
+    let usedSheetName: string | null = null;
+
+    for (const candidate of adminSheetCandidates) {
+      const data = await getSheetData(candidate);
+      if (data.length > 0) {
+        adminsData = data;
+        usedSheetName = candidate;
+        break;
+      }
+    }
+
+    // If admin sheet can't be read, return a diagnostic error (don't auto-create to avoid side effects)
+    if (adminsData.length === 0) {
+      return {
+        success: false,
+        error:
+          'تعذر قراءة ورقة الأدمن. تأكد أن اسم التبويب أحد القيم التالية: ' +
+          adminSheetCandidates.join(' / ') +
+          '، وتأكد أن GOOGLE_SHEETS_SPREADSHEET_ID صحيح وأن حساب الخدمة لديه صلاحية على الملف.',
       };
     }
 
@@ -136,7 +171,9 @@ export async function authenticateAdmin(code: string, password: string): Promise
 
     return {
       success: false,
-      error: 'كود الأدمن غير مسجل في النظام',
+      error: usedSheetName
+        ? `كود الأدمن غير مسجل في النظام (تمت القراءة من تبويب: ${usedSheetName})`
+        : 'كود الأدمن غير مسجل في النظام',
     };
   } catch (error: any) {
     return {
