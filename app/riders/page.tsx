@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Layout from '@/components/Layout';
 import { useQuery } from '@tanstack/react-query';
+import * as XLSX from 'xlsx';
 
 interface RiderData {
   code: string;
@@ -21,6 +22,8 @@ export default function RidersPage() {
   const [riders, setRiders] = useState<RiderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [searchRiderCode, setSearchRiderCode] = useState('');
+  const [exporting, setExporting] = useState(false);
   const [startDate, setStartDate] = useState(() => {
     // Default to today
     return new Date().toISOString().split('T')[0];
@@ -37,6 +40,12 @@ export default function RidersPage() {
   useEffect(() => {
     fetchRiders();
   }, [startDate, endDate]);
+
+  const normalizedSearchCode = searchRiderCode.trim().toLowerCase();
+  const visibleRiders =
+    normalizedSearchCode.length === 0
+      ? riders
+      : riders.filter((r) => (r.code || '').toString().trim().toLowerCase().includes(normalizedSearchCode));
 
   const fetchRiders = async (forceRefresh: boolean = false) => {
     try {
@@ -70,6 +79,65 @@ export default function RidersPage() {
       setError('حدث خطأ في الاتصال بالخادم');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadExcel = async () => {
+    try {
+      setExporting(true);
+      const rows = visibleRiders.map((r) => ({
+        'كود المندوب': r.code ?? '',
+        'اسم المندوب': r.name ?? '',
+        'التاريخ/الفترة': r.date ?? (startDate && endDate ? (startDate === endDate ? startDate : `${startDate} - ${endDate}`) : ''),
+        'ساعات العمل': Number.isFinite(r.hours) ? Number(r.hours) : 0,
+        'البريك': Number.isFinite(r.break) ? Number(r.break) : 0,
+        'التأخير': Number.isFinite(r.delay) ? Number(r.delay) : 0,
+        'الغياب': r.absence ?? '',
+        'الطلبات': Number.isFinite(r.orders) ? Number(r.orders) : 0,
+        'نسبة القبول %': Number.isFinite(r.acceptance) ? Number(r.acceptance) : 0,
+        'المديونية': Number.isFinite(r.debt) ? Number(r.debt) : 0,
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(rows, {
+        header: [
+          'كود المندوب',
+          'اسم المندوب',
+          'التاريخ/الفترة',
+          'ساعات العمل',
+          'البريك',
+          'التأخير',
+          'الغياب',
+          'الطلبات',
+          'نسبة القبول %',
+          'المديونية',
+        ],
+      });
+
+      worksheet['!cols'] = [
+        { wch: 14 },
+        { wch: 22 },
+        { wch: 22 },
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 10 },
+        { wch: 14 },
+        { wch: 12 },
+      ];
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'أداء المناديب');
+
+      const safeStart = (startDate || '').replaceAll(':', '-');
+      const safeEnd = (endDate || '').replaceAll(':', '-');
+      const suffix = safeStart && safeEnd ? `${safeStart}_to_${safeEnd}` : new Date().toISOString().split('T')[0];
+      const fileName = `riders_performance_${suffix}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+    } catch (e: any) {
+      alert(`❌ فشل تنزيل ملف Excel: ${e?.message || 'خطأ غير معروف'}`);
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -191,6 +259,33 @@ export default function RidersPage() {
               🔄 تحديث
             </button>
           </div>
+
+          <div className="mt-4 flex flex-wrap gap-3 items-end justify-between">
+            <div className="min-w-0 flex-1 sm:flex-initial">
+              <label htmlFor="search-rider-code" className="block text-sm font-medium text-gray-700 mb-2">
+                بحث بكود المندوب
+              </label>
+              <input
+                id="search-rider-code"
+                name="search-rider-code"
+                type="text"
+                value={searchRiderCode}
+                onChange={(e) => setSearchRiderCode(e.target.value)}
+                placeholder="اكتب كود المندوب..."
+                className="w-full sm:w-72 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={downloadExcel}
+              disabled={exporting || visibleRiders.length === 0}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              title={visibleRiders.length === 0 ? 'لا توجد بيانات لتنزيلها' : 'تنزيل البيانات كملف Excel'}
+            >
+              {exporting ? 'جاري تجهيز Excel...' : '⬇️ تنزيل Excel'}
+            </button>
+          </div>
+
           {startDate && endDate && (
             <p className="mt-3 text-sm text-gray-600">
               عرض بيانات من <span className="font-semibold text-blue-600">
@@ -235,8 +330,8 @@ export default function RidersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {riders.length > 0 ? (
-                  riders.map((rider, index) => (
+                {visibleRiders.length > 0 ? (
+                  visibleRiders.map((rider, index) => (
                     <tr key={`rider-${rider.code}-${index}`} className="hover:bg-gray-50">
                       <td className="py-4 px-6 text-sm text-gray-800">{rider.code}</td>
                       <td className="py-4 px-6 text-sm text-gray-800 font-medium">{rider.name}</td>
@@ -298,7 +393,7 @@ export default function RidersPage() {
                 ) : (
                   <tr>
                     <td colSpan={11} className="py-12 text-center text-gray-500">
-                      لا توجد بيانات متاحة
+                      {riders.length === 0 ? 'لا توجد بيانات متاحة' : 'لا توجد نتائج مطابقة للبحث'}
                     </td>
                   </tr>
                 )}
