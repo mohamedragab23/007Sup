@@ -14,6 +14,9 @@ interface SupervisorPerformanceRow {
   avg_acceptance: number;
   records_count: number;
   orders_per_rider: number;
+  target_hours_daily?: number;
+  target_hours_total?: number;
+  achievement_percent?: number;
 }
 
 interface ReportSummary {
@@ -22,6 +25,19 @@ interface ReportSummary {
   total_hours: number;
   avg_acceptance: number;
   total_records: number;
+}
+
+interface ComparisonData {
+  days: number;
+  best_supervisor: null | {
+    code: string;
+    name: string;
+    achievement_percent: number;
+    total_hours: number;
+    total_orders: number;
+    target_hours_daily: number;
+    target_hours_total: number;
+  };
 }
 
 export default function SupervisorPerformancePage() {
@@ -44,6 +60,7 @@ export default function SupervisorPerformancePage() {
         start_date: string;
         end_date: string;
         summary: ReportSummary;
+        comparison?: ComparisonData;
         supervisors: SupervisorPerformanceRow[];
       };
     },
@@ -66,6 +83,8 @@ export default function SupervisorPerformancePage() {
   const loading = isLoading || isFetching;
   const supervisors = data?.supervisors ?? [];
   const summary = data?.summary;
+  const comparison = data?.comparison;
+  const bestSupervisorCode = comparison?.best_supervisor?.code || '';
 
   return (
     <Layout>
@@ -164,6 +183,73 @@ export default function SupervisorPerformancePage() {
                 </div>
               </div>
             </div>
+
+            {/* مقارنة الأهداف (للأدمن) */}
+            {comparison && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                  <div className="min-w-0">
+                    <h3 className="text-lg font-bold text-gray-800 break-words">🎯 مقارنة الهدف اليومي للمشرفين</h3>
+                    <p className="text-sm text-gray-600 break-words">
+                      عدد أيام الفترة: <span className="font-semibold">{comparison.days || 0}</span>
+                    </p>
+                  </div>
+                  {comparison.best_supervisor && (
+                    <div className="shrink-0 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-3 py-2 text-sm font-semibold">
+                      أفضل مشرف: {comparison.best_supervisor.name} ({comparison.best_supervisor.achievement_percent}%)
+                    </div>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="text-right p-3 font-semibold text-gray-800">المشرف</th>
+                        <th className="text-center p-3 font-semibold text-gray-800">الهدف اليومي (ساعة)</th>
+                        <th className="text-center p-3 font-semibold text-gray-800">إجمالي الهدف (ساعة)</th>
+                        <th className="text-center p-3 font-semibold text-gray-800">الساعات الفعلية</th>
+                        <th className="text-center p-3 font-semibold text-gray-800">تحقيق الهدف %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {supervisors
+                        .slice()
+                        .sort((a, b) => (Number(b.achievement_percent || 0) - Number(a.achievement_percent || 0)))
+                        .map((sup) => {
+                          const isBest = bestSupervisorCode && sup.code === bestSupervisorCode;
+                          const targetDaily = Number(sup.target_hours_daily || 0);
+                          const targetTotal = Number(sup.target_hours_total || 0);
+                          const actualHours = Number(sup.total_hours || 0);
+                          const percent = Number(sup.achievement_percent || 0);
+                          return (
+                            <tr
+                              key={`compare-${sup.code}`}
+                              className={`border-b border-gray-100 ${isBest ? 'bg-amber-50' : 'hover:bg-gray-50/50'}`}
+                            >
+                              <td className="p-3 text-right font-medium">
+                                <span className="truncate" title={sup.name}>{sup.name}</span>
+                                {isBest && <span className="mr-2 text-amber-700 font-bold">★</span>}
+                              </td>
+                              <td className="p-3 text-center">{targetDaily > 0 ? targetDaily : '—'}</td>
+                              <td className="p-3 text-center">{targetTotal > 0 ? targetTotal : '—'}</td>
+                              <td className="p-3 text-center">{actualHours}</td>
+                              <td className="p-3 text-center font-semibold">
+                                {targetTotal > 0 ? `${percent}%` : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      {supervisors.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="p-6 text-center text-gray-500">لا توجد بيانات للمقارنة</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* تبديل العرض: بطاقات / جدول */}
             <div className="flex gap-2">
