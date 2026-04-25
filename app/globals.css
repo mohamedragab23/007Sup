@@ -127,6 +127,18 @@ body {
 .app-theme .text-green-600 { color: #4ade80; }
 .app-theme .text-red-600 { color: #fb7185; }
 
+/* Table row hover: prevent "white hover" that hides text. */
+.app-theme table tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* Override legacy hover utilities that turn rows white/too bright. */
+.app-theme .hover\:bg-white:hover,
+.app-theme .hover\:bg-gray-50:hover,
+.app-theme .hover\:bg-gray-100:hover {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
 /* Table scroll containers: allow horizontal scroll inside, no page overflow */
 @media (max-width: 768px) {
   .overflow-x-auto {
