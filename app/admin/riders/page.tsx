@@ -159,8 +159,8 @@ export default function AdminRidersPage() {
       <div className="space-y-6 min-w-0">
         <div className="flex flex-wrap justify-between items-center gap-2">
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">إدارة المناديب</h1>
-            <p className="text-gray-600 text-sm sm:text-base break-words">إضافة وتعيين المناديب للمشرفين</p>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-[#EAF0FF] mb-2 break-words">إدارة المناديب</h1>
+            <p className="text-[rgba(234,240,255,0.70)] text-sm sm:text-base break-words">إضافة وتعيين المناديب للمشرفين</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
@@ -171,7 +171,7 @@ export default function AdminRidersPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">إضافة مندوب واحد</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -255,13 +255,13 @@ export default function AdminRidersPage() {
           />
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-[#1e1e2f]">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[900px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الكود</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الاسم</th>
+                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700 min-w-[240px]">الاسم</th>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">المنطقة</th>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">المشرف</th>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الحالة</th>
@@ -286,7 +286,7 @@ export default function AdminRidersPage() {
                     .map((rider: Rider, index: number) => (
                     <tr key={`rider-${rider.code}-${index}`} className="hover:bg-gray-50">
                       <td className="py-4 px-6 text-sm text-gray-800">{rider.code}</td>
-                      <td className="py-4 px-6 text-sm text-gray-800 font-medium">{rider.name}</td>
+                      <td className="py-4 px-6 text-sm text-gray-800 font-medium whitespace-normal break-words">{rider.name}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">{rider.region}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">
                         {rider.supervisorCode && rider.supervisorCode.trim() !== '' && 

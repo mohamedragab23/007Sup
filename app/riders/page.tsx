@@ -224,11 +224,13 @@ export default function RidersPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">المناديب</h1>
-          <p className="text-gray-600">قائمة بجميع المناديب وأدائهم - اختر النطاق الزمني لعرض البيانات</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">المناديب</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">
+            قائمة بجميع المناديب وأدائهم - اختر النطاق الزمني لعرض البيانات
+          </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <label htmlFor="riders-start-date" className="block text-sm font-medium text-gray-700 mb-2">من تاريخ</label>
@@ -311,13 +313,13 @@ export default function RidersPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-[#1e1e2f]">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[1100px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الكود</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الاسم</th>
+                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700 min-w-[240px]">الاسم</th>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">التاريخ</th>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">ساعات العمل</th>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">البريك</th>
@@ -334,7 +336,9 @@ export default function RidersPage() {
                   visibleRiders.map((rider, index) => (
                     <tr key={`rider-${rider.code}-${index}`} className="hover:bg-gray-50">
                       <td className="py-4 px-6 text-sm text-gray-800">{rider.code}</td>
-                      <td className="py-4 px-6 text-sm text-gray-800 font-medium">{rider.name}</td>
+                      <td className="py-4 px-6 text-sm text-gray-800 font-medium whitespace-normal break-words">
+                        {rider.name}
+                      </td>
                       <td className="py-4 px-6 text-sm text-gray-600">
                         {rider.date ? (() => {
                           try {
