@@ -9,33 +9,33 @@ interface TopRider {
 
 export default function TopRidersTable({ topRiders }: { topRiders: TopRider[] }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 overflow-hidden">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 break-words">أفضل المناديب</h3>
+    <div className="rounded-[var(--v2-radius-xl)] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.06)] shadow-[var(--v2-shadow-soft)] p-4 sm:p-6 min-w-0 overflow-hidden backdrop-blur-md">
+      <h3 className="text-lg font-semibold text-[#EAF0FF] mb-4 break-words">أفضل المناديب</h3>
       {topRiders.length > 0 ? (
         <div className="overflow-x-auto min-w-0">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الاسم</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الطلبات</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الساعات</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">نسبة القبول</th>
+              <tr className="border-b border-[rgba(255,255,255,0.10)]">
+                <th className="text-right py-3 px-4 text-sm font-semibold text-[rgba(234,240,255,0.75)]">الاسم</th>
+                <th className="text-right py-3 px-4 text-sm font-semibold text-[rgba(234,240,255,0.75)]">الطلبات</th>
+                <th className="text-right py-3 px-4 text-sm font-semibold text-[rgba(234,240,255,0.75)]">الساعات</th>
+                <th className="text-right py-3 px-4 text-sm font-semibold text-[rgba(234,240,255,0.75)]">نسبة القبول</th>
               </tr>
             </thead>
             <tbody>
               {topRiders.map((rider, index) => (
-                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-sm text-gray-800">{rider.name}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{rider.orders}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{rider.hours.toFixed(1)}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{rider.acceptance.toFixed(1)}%</td>
+                <tr key={index} className="border-b border-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.04)]">
+                  <td className="py-3 px-4 text-sm text-[#EAF0FF]">{rider.name}</td>
+                  <td className="py-3 px-4 text-sm text-[rgba(234,240,255,0.70)]">{rider.orders}</td>
+                  <td className="py-3 px-4 text-sm text-[rgba(234,240,255,0.70)]">{rider.hours.toFixed(1)}</td>
+                  <td className="py-3 px-4 text-sm text-[rgba(234,240,255,0.70)]">{rider.acceptance.toFixed(1)}%</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">لا توجد بيانات متاحة</div>
+        <div className="text-center py-12 text-[rgba(234,240,255,0.60)]">لا توجد بيانات متاحة</div>
       )}
     </div>
   );

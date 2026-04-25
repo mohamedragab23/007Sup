@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import Card from '@/components/ui-v2/Card';
 
 interface DashboardData {
   totalHours: number;
@@ -47,18 +48,21 @@ const DashboardStats = memo(function DashboardStats({ data }: { data: DashboardD
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 min-w-0">
       {stats.map((stat, index) => (
-        <div
+        <Card
           key={index}
-          className="bg-white rounded-xl shadow-sm p-3 sm:p-5 border border-gray-100 hover:shadow-md transition-shadow min-w-0 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-3">
-            <div className={`${stat.color} p-2 sm:p-2.5 rounded-lg text-white text-lg sm:text-xl shrink-0`}>
+          title={stat.label}
+          rightSlot={
+            <div
+              className="p-2 sm:p-2.5 rounded-[var(--v2-radius-lg)] text-black text-lg sm:text-xl shrink-0 bg-gradient-to-l from-[color:var(--v2-accent-cyan)] to-[color:var(--v2-accent-purple)]"
+              aria-hidden="true"
+            >
               {stat.icon}
             </div>
-          </div>
-          <h3 className="text-gray-600 text-xs mb-1 truncate">{stat.label}</h3>
-          <p className="text-base sm:text-xl font-bold text-gray-800 break-all">{stat.value}</p>
-        </div>
+          }
+          className="min-w-0 overflow-hidden"
+        >
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#EAF0FF] break-all">{stat.value}</p>
+        </Card>
       ))}
     </div>
   );

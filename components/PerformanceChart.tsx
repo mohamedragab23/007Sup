@@ -7,9 +7,9 @@ import dynamic from 'next/dynamic';
 const LazyChart = dynamic(() => import('./LazyChart'), {
   ssr: false,
   loading: () => (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+    <div className="rounded-[var(--v2-radius-xl)] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.06)] shadow-[var(--v2-shadow-soft)] p-6 backdrop-blur-md">
       <div className="h-64 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[color:var(--v2-accent-cyan)]"></div>
       </div>
     </div>
   ),
@@ -70,9 +70,9 @@ const PerformanceChart = memo(function PerformanceChart({ startDate, endDate }: 
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+      <div className="rounded-[var(--v2-radius-xl)] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.06)] shadow-[var(--v2-shadow-soft)] p-6 backdrop-blur-md">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[color:var(--v2-accent-cyan)]"></div>
         </div>
       </div>
     );
@@ -107,15 +107,15 @@ const PerformanceChart = memo(function PerformanceChart({ startDate, endDate }: 
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 max-w-full overflow-hidden">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 break-words">{formatDateRange()}</h3>
+    <div className="rounded-[var(--v2-radius-xl)] border border-[rgba(255,255,255,0.10)] bg-[rgba(255,255,255,0.06)] shadow-[var(--v2-shadow-soft)] p-4 sm:p-6 min-w-0 max-w-full overflow-hidden backdrop-blur-md">
+      <h3 className="text-lg font-semibold text-[#EAF0FF] mb-4 break-words">{formatDateRange()}</h3>
       {performanceData && performanceData.length > 0 ? (
         <LazyChart data={performanceData} dataKeys={['طلبات', 'ساعات']} />
       ) : (
         <div className="text-center py-12">
-          <p className="text-gray-500 mb-2">لا توجد بيانات متاحة</p>
+          <p className="text-[rgba(234,240,255,0.65)] mb-2">لا توجد بيانات متاحة</p>
           {startDate && endDate && (
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-[rgba(234,240,255,0.45)]">
               للفترة من {new Date(startDate).toLocaleDateString('ar-EG')} إلى {new Date(endDate).toLocaleDateString('ar-EG')}
             </p>
           )}
