@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { v2CssVars } from '@/theme/tokens';
 
 interface User {
   name?: string;
@@ -19,6 +20,7 @@ export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isAdminRoute = pathname?.startsWith('/admin');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -92,19 +94,32 @@ export default function Layout({ children }: LayoutProps) {
   const menuItems = getMenuItems();
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+    <div
+      style={isAdminRoute ? undefined : v2CssVars()}
+      className={
+        isAdminRoute
+          ? 'min-h-screen bg-gray-50 overflow-x-hidden'
+          : 'min-h-screen overflow-x-hidden bg-[#05070D] text-[#EAF0FF] bg-[radial-gradient(900px_500px_at_20%_-10%,rgba(168,85,247,0.22),transparent_60%),radial-gradient(800px_500px_at_90%_0%,rgba(0,245,255,0.18),transparent_60%),linear-gradient(180deg,#05070D,#070A14_60%,#05070D)]'
+      }
+    >
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white shadow-sm border-b">
+      <div
+        className={
+          isAdminRoute
+            ? 'lg:hidden bg-white shadow-sm border-b'
+            : 'lg:hidden bg-[rgba(255,255,255,0.06)] backdrop-blur-md border-b border-[rgba(255,255,255,0.10)]'
+        }
+      >
         <div className="flex items-center justify-between p-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-gray-100"
+            className={isAdminRoute ? 'p-2 rounded-lg hover:bg-gray-100' : 'p-2 rounded-lg hover:bg-[rgba(255,255,255,0.06)]'}
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-gray-800">نظام الإدارة</h1>
+          <h1 className={isAdminRoute ? 'text-xl font-bold text-gray-800' : 'text-xl font-bold text-[#EAF0FF]'}>نظام الإدارة</h1>
           <div className="w-10" />
         </div>
       </div>
@@ -114,12 +129,18 @@ export default function Layout({ children }: LayoutProps) {
         <aside
           className={`${
             sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out`}
+          } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out ${
+            isAdminRoute
+              ? 'bg-white shadow-lg'
+              : 'bg-[rgba(255,255,255,0.06)] backdrop-blur-md border-e border-[rgba(255,255,255,0.10)] shadow-[var(--v2-shadow-soft)]'
+          }`}
         >
           <div className="h-full flex flex-col">
-            <div className="p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-800">Wakeel Team</h2>
-              <p className="text-sm text-gray-600 mt-1">{user?.name || 'المستخدم'}</p>
+            <div className={isAdminRoute ? 'p-6 border-b' : 'p-6 border-b border-[rgba(255,255,255,0.10)]'}>
+              <h2 className={isAdminRoute ? 'text-2xl font-bold text-gray-800' : 'text-2xl font-bold text-[#EAF0FF]'}>Wakeel Team</h2>
+              <p className={isAdminRoute ? 'text-sm text-gray-600 mt-1' : 'text-sm text-[rgba(234,240,255,0.70)] mt-1'}>
+                {user?.name || 'المستخدم'}
+              </p>
             </div>
 
             <nav className="flex-1 p-4 space-y-2">
@@ -130,8 +151,12 @@ export default function Layout({ children }: LayoutProps) {
                   prefetch={true} // Prefetch pages on hover for faster navigation
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     pathname === item.href
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? isAdminRoute
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gradient-to-l from-[color:var(--v2-accent-cyan)] to-[color:var(--v2-accent-purple)] text-black shadow-[var(--v2-shadow-glow)]'
+                      : isAdminRoute
+                        ? 'text-gray-700 hover:bg-gray-100'
+                        : 'text-[rgba(234,240,255,0.80)] hover:bg-[rgba(255,255,255,0.06)]'
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -141,10 +166,14 @@ export default function Layout({ children }: LayoutProps) {
               ))}
             </nav>
 
-            <div className="p-4 border-t">
+            <div className={isAdminRoute ? 'p-4 border-t' : 'p-4 border-t border-[rgba(255,255,255,0.10)]'}>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+                className={
+                  isAdminRoute
+                    ? 'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-colors'
+                    : 'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-[#FB7185] hover:bg-[rgba(251,113,133,0.10)] transition-colors'
+                }
               >
                 <span>🚪</span>
                 <span className="font-medium">تسجيل الخروج</span>
