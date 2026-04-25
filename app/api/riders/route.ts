@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { getSupervisorRiders, getLatestRiderData } from '@/lib/dataService';
 import { getSupervisorPerformanceFiltered } from '@/lib/dataFilter';
+import { aggregateRidersInDateRange } from '@/lib/riderPerformanceAggregate';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,81 +68,23 @@ export async function GET(request: NextRequest) {
         console.log(`[Riders API] ⚠️ No performance data found for the date range!`);
       }
 
-      // Group by rider code and aggregate data
-      const riderDataMap = new Map<string, any>();
-      
-      // Initialize all riders (even if no performance data)
-      riders.forEach((rider) => {
-        riderDataMap.set(rider.code, {
-          code: rider.code,
-          name: rider.name,
-          region: rider.region,
-          hours: 0,
-          break: 0,
-          delay: 0,
-          absenceCount: 0, // Count of absent days
-          absenceDays: 0, // Total days with data
-          orders: 0,
-          acceptanceSum: 0, // Sum of acceptance rates
-          acceptanceCount: 0, // Count of records with acceptance
-          debt: 0,
-          date: startDateParam === endDateParam ? startDateParam : `${startDateParam} - ${endDateParam}`,
-        });
-      });
+      const dateLabel =
+        startDateParam === endDateParam ? startDateParam : `${startDateParam} - ${endDateParam}`;
+      const seeds = riders.map((r) => ({
+        code: r.code,
+        name: r.name,
+        region: r.region,
+      }));
+      const ridersWithData = aggregateRidersInDateRange(seeds, performanceData, dateLabel);
 
-      // Aggregate performance data by rider
-      let recordsProcessed = 0;
-      performanceData.forEach((record) => {
-        const riderData = riderDataMap.get(record.riderCode);
-        if (riderData) {
-          recordsProcessed++;
-          riderData.hours += record.hours || 0;
-          riderData.break += record.break || 0;
-          riderData.delay += record.delay || 0;
-          riderData.orders += record.orders || 0;
-          riderData.debt += record.debt || 0;
-          riderData.absenceDays++;
-          
-          // Count absences - handle various formats
-          const absenceRaw = record.absence?.toString().trim() || 'لا';
-          if (absenceRaw === 'نعم' || absenceRaw === '1' || absenceRaw === 'yes' || absenceRaw.toLowerCase() === 'yes') {
-            riderData.absenceCount++;
-          }
-          
-          // Sum acceptance rates for averaging later
-          const acceptanceStr = record.acceptance?.toString() || '0';
-          let acceptanceNum = parseFloat(acceptanceStr.replace('%', '').replace('٪', '')) || 0;
-          // If acceptance is between 0 and 1, it's likely a decimal (0.01 = 1%), so multiply by 100
-          if (acceptanceNum > 0 && acceptanceNum <= 1) {
-            acceptanceNum = acceptanceNum * 100;
-          }
-          if (acceptanceNum > 0) {
-            riderData.acceptanceSum += acceptanceNum;
-            riderData.acceptanceCount++;
-          }
-        }
-      });
+      const assignedCodes = new Set(riders.map((r) => (r.code ?? '').toString().trim()));
+      const recordsProcessed = performanceData.filter((record) =>
+        assignedCodes.has((record.riderCode ?? '').toString().trim())
+      ).length;
 
-      // Calculate final values
-      riderDataMap.forEach((riderData) => {
-        // Calculate average acceptance rate
-        riderData.acceptance = riderData.acceptanceCount > 0 
-          ? riderData.acceptanceSum / riderData.acceptanceCount 
-          : 0;
-        
-        // Set absence text
-        riderData.absence = riderData.absenceCount > 0 ? 'نعم' : 'لا';
-        
-        // Clean up temporary fields
-        delete riderData.acceptanceSum;
-        delete riderData.acceptanceCount;
-        delete riderData.absenceCount;
-        delete riderData.absenceDays;
-      });
-
-      console.log(`[Riders API] Records processed: ${recordsProcessed}, Riders with data: ${Array.from(riderDataMap.values()).filter(r => r.orders > 0 || r.hours > 0).length}`);
-
-      const ridersWithData = Array.from(riderDataMap.values());
+      console.log(
+        `[Riders API] Records processed: ${recordsProcessed}, Riders with data: ${ridersWithData.filter((r) => r.orders > 0 || r.hours > 0).length}`
+      );
       
       // Always return riders, even if no performance data (so supervisor can see their assigned riders)
       return NextResponse.json({
@@ -165,45 +108,12 @@ export async function GET(request: NextRequest) {
         endDate
       );
 
-      // Group by rider code
-      const riderDataMap = new Map<string, any>();
-      riders.forEach((rider) => {
-        riderDataMap.set(rider.code, {
-          code: rider.code,
-          name: rider.name,
-          region: rider.region,
-          hours: 0,
-          break: 0,
-          delay: 0,
-          absence: 'لا',
-          orders: 0,
-          acceptance: 0,
-          debt: 0,
-          date: dateParam,
-        });
-      });
-
-      // Aggregate performance data by rider
-      performanceData.forEach((record) => {
-        const riderData = riderDataMap.get(record.riderCode);
-        if (riderData) {
-          riderData.hours += record.hours || 0;
-          riderData.break += record.break || 0;
-          riderData.delay += record.delay || 0;
-          riderData.orders += record.orders || 0;
-          riderData.debt += record.debt || 0;
-          if (record.absence === 'نعم') {
-            riderData.absence = 'نعم';
-          }
-          // Calculate average acceptance rate
-          const acceptanceNum = parseFloat(record.acceptance?.toString().replace('%', '') || '0');
-          if (acceptanceNum > 0) {
-            riderData.acceptance = acceptanceNum;
-          }
-        }
-      });
-
-      const ridersWithData = Array.from(riderDataMap.values());
+      const seeds = riders.map((r) => ({
+        code: r.code,
+        name: r.name,
+        region: r.region,
+      }));
+      const ridersWithData = aggregateRidersInDateRange(seeds, performanceData, dateParam);
       return NextResponse.json({
         success: true,
         data: ridersWithData,
@@ -226,6 +136,7 @@ export async function GET(request: NextRequest) {
           acceptance: latestData?.acceptance || 0,
           debt: latestData?.debt || 0,
           date: latestData?.date || null, // Include date for display
+          workDays: 0,
         };
       })
     );

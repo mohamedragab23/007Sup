@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import { useQuery } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 interface RiderData {
   code: string;
   name: string;
+  region?: string;
   hours: number;
   break: number;
   delay: number;
@@ -16,6 +17,7 @@ interface RiderData {
   acceptance: number;
   debt: number;
   date?: string | null;
+  workDays?: number;
 }
 
 export default function RidersPage() {
@@ -37,6 +39,20 @@ export default function RidersPage() {
   const [terminationReason, setTerminationReason] = useState('');
   const [terminationLoading, setTerminationLoading] = useState(false);
 
+  const [fHoursMin, setFHoursMin] = useState('');
+  const [fHoursMax, setFHoursMax] = useState('');
+  const [fBreakMin, setFBreakMin] = useState('');
+  const [fBreakMax, setFBreakMax] = useState('');
+  const [fDelayMin, setFDelayMin] = useState('');
+  const [fDelayMax, setFDelayMax] = useState('');
+  const [fAbsence, setFAbsence] = useState<'all' | 'نعم' | 'لا'>('all');
+  const [fOrdersMin, setFOrdersMin] = useState('');
+  const [fOrdersMax, setFOrdersMax] = useState('');
+  const [fAcceptMin, setFAcceptMin] = useState('');
+  const [fAcceptMax, setFAcceptMax] = useState('');
+  const [fDebtMin, setFDebtMin] = useState('');
+  const [fDebtMax, setFDebtMax] = useState('');
+
   useEffect(() => {
     fetchRiders();
   }, [startDate, endDate]);
@@ -46,6 +62,65 @@ export default function RidersPage() {
     normalizedSearchCode.length === 0
       ? riders
       : riders.filter((r) => (r.code || '').toString().trim().toLowerCase().includes(normalizedSearchCode));
+
+  const parseNum = (s: string) => {
+    const t = s.trim();
+    if (t === '') return null;
+    const n = parseFloat(t);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const inNumRange = (value: number, minS: string, maxS: string) => {
+    const mn = parseNum(minS);
+    const mx = parseNum(maxS);
+    if (mn !== null && value < mn) return false;
+    if (mx !== null && value > mx) return false;
+    return true;
+  };
+
+  const columnFilteredRiders = useMemo(() => {
+    return visibleRiders.filter((r) => {
+      if (!inNumRange(Number(r.hours) || 0, fHoursMin, fHoursMax)) return false;
+      if (!inNumRange(Number(r.break) || 0, fBreakMin, fBreakMax)) return false;
+      if (!inNumRange(Number(r.delay) || 0, fDelayMin, fDelayMax)) return false;
+      if (fAbsence !== 'all' && (r.absence || '').trim() !== fAbsence) return false;
+      if (!inNumRange(Number(r.orders) || 0, fOrdersMin, fOrdersMax)) return false;
+      if (!inNumRange(Number(r.acceptance) || 0, fAcceptMin, fAcceptMax)) return false;
+      if (!inNumRange(Number(r.debt) || 0, fDebtMin, fDebtMax)) return false;
+      return true;
+    });
+  }, [
+    visibleRiders,
+    fHoursMin,
+    fHoursMax,
+    fBreakMin,
+    fBreakMax,
+    fDelayMin,
+    fDelayMax,
+    fAbsence,
+    fOrdersMin,
+    fOrdersMax,
+    fAcceptMin,
+    fAcceptMax,
+    fDebtMin,
+    fDebtMax,
+  ]);
+
+  const clearColumnFilters = () => {
+    setFHoursMin('');
+    setFHoursMax('');
+    setFBreakMin('');
+    setFBreakMax('');
+    setFDelayMin('');
+    setFDelayMax('');
+    setFAbsence('all');
+    setFOrdersMin('');
+    setFOrdersMax('');
+    setFAcceptMin('');
+    setFAcceptMax('');
+    setFDebtMin('');
+    setFDebtMax('');
+  };
 
   const fetchRiders = async (forceRefresh: boolean = false) => {
     try {
@@ -85,10 +160,11 @@ export default function RidersPage() {
   const downloadExcel = async () => {
     try {
       setExporting(true);
-      const rows = visibleRiders.map((r) => ({
+      const rows = columnFilteredRiders.map((r) => ({
         'كود المندوب': r.code ?? '',
         'اسم المندوب': r.name ?? '',
         'التاريخ/الفترة': r.date ?? (startDate && endDate ? (startDate === endDate ? startDate : `${startDate} - ${endDate}`) : ''),
+        'عدد أيام العمل': Number.isFinite(r.workDays) ? Number(r.workDays) : 0,
         'ساعات العمل': Number.isFinite(r.hours) ? Number(r.hours) : 0,
         'البريك': Number.isFinite(r.break) ? Number(r.break) : 0,
         'التأخير': Number.isFinite(r.delay) ? Number(r.delay) : 0,
@@ -103,6 +179,7 @@ export default function RidersPage() {
           'كود المندوب',
           'اسم المندوب',
           'التاريخ/الفترة',
+          'عدد أيام العمل',
           'ساعات العمل',
           'البريك',
           'التأخير',
@@ -117,6 +194,7 @@ export default function RidersPage() {
         { wch: 14 },
         { wch: 22 },
         { wch: 22 },
+        { wch: 12 },
         { wch: 12 },
         { wch: 10 },
         { wch: 10 },
@@ -279,10 +357,17 @@ export default function RidersPage() {
             </div>
             <button
               type="button"
+              onClick={clearColumnFilters}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              مسح فلاتر الأعمدة
+            </button>
+            <button
+              type="button"
               onClick={downloadExcel}
-              disabled={exporting || visibleRiders.length === 0}
+              disabled={exporting || columnFilteredRiders.length === 0}
               className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              title={visibleRiders.length === 0 ? 'لا توجد بيانات لتنزيلها' : 'تنزيل البيانات كملف Excel'}
+              title={columnFilteredRiders.length === 0 ? 'لا توجد بيانات لتنزيلها' : 'تنزيل البيانات كملف Excel'}
             >
               {exporting ? 'جاري تجهيز Excel...' : '⬇️ تنزيل Excel'}
             </button>
@@ -315,31 +400,170 @@ export default function RidersPage() {
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px]">
+            <table className="w-full min-w-[1280px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الكود</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700 min-w-[240px]">الاسم</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">التاريخ</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">ساعات العمل</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">البريك</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">التأخير</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الغياب</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الطلبات</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">نسبة القبول</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">المديونية</th>
-                  <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">إجراءات</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الكود</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 min-w-[200px]">الاسم</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">التاريخ</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 whitespace-nowrap">عدد أيام العمل</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ساعات العمل</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">البريك</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">التأخير</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الغياب</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الطلبات</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">نسبة القبول</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">المديونية</th>
+                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">إجراءات</th>
+                </tr>
+                <tr className="border-t border-gray-200 bg-gray-100/80">
+                  <th className="p-2 px-4" />
+                  <th className="p-2 px-4" />
+                  <th className="p-2 px-4" />
+                  <th className="p-2 px-4" />
+                  <th className="p-2 px-2 align-bottom">
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="من"
+                        value={fHoursMin}
+                        onChange={(e) => setFHoursMin(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="إلى"
+                        value={fHoursMax}
+                        onChange={(e) => setFHoursMax(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-2 px-2 align-bottom">
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="من"
+                        value={fBreakMin}
+                        onChange={(e) => setFBreakMin(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="إلى"
+                        value={fBreakMax}
+                        onChange={(e) => setFBreakMax(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-2 px-2 align-bottom">
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="من"
+                        value={fDelayMin}
+                        onChange={(e) => setFDelayMin(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="إلى"
+                        value={fDelayMax}
+                        onChange={(e) => setFDelayMax(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-2 px-2 align-bottom">
+                    <select
+                      value={fAbsence}
+                      onChange={(e) => setFAbsence(e.target.value as 'all' | 'نعم' | 'لا')}
+                      className="w-full min-w-[5rem] px-2 py-1.5 text-xs border border-gray-300 rounded-md bg-white"
+                    >
+                      <option value="all">الكل</option>
+                      <option value="نعم">نعم</option>
+                      <option value="لا">لا</option>
+                    </select>
+                  </th>
+                  <th className="p-2 px-2 align-bottom">
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="من"
+                        value={fOrdersMin}
+                        onChange={(e) => setFOrdersMin(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="إلى"
+                        value={fOrdersMax}
+                        onChange={(e) => setFOrdersMax(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-2 px-2 align-bottom">
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="من %"
+                        value={fAcceptMin}
+                        onChange={(e) => setFAcceptMin(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="إلى %"
+                        value={fAcceptMax}
+                        onChange={(e) => setFAcceptMax(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-2 px-2 align-bottom">
+                    <div className="flex flex-col gap-1">
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="من"
+                        value={fDebtMin}
+                        onChange={(e) => setFDebtMin(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        placeholder="إلى"
+                        value={fDebtMax}
+                        onChange={(e) => setFDebtMax(e.target.value)}
+                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-2 px-4" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {visibleRiders.length > 0 ? (
-                  visibleRiders.map((rider, index) => (
+                {columnFilteredRiders.length > 0 ? (
+                  columnFilteredRiders.map((rider, index) => (
                     <tr key={`rider-${rider.code}-${index}`} className="hover:bg-gray-50">
-                      <td className="py-4 px-6 text-sm text-gray-800">{rider.code}</td>
-                      <td className="py-4 px-6 text-sm text-gray-800 font-medium whitespace-normal break-words">
+                      <td className="py-4 px-4 text-sm text-gray-800">{rider.code}</td>
+                      <td className="py-4 px-4 text-sm text-gray-800 font-medium whitespace-normal break-words">
                         {rider.name}
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-600">
+                      <td className="py-4 px-4 text-sm text-gray-600">
                         {rider.date ? (() => {
                           try {
                             // Handle date range string (e.g., "2025-11-01 - 2025-11-22")
@@ -367,10 +591,13 @@ export default function RidersPage() {
                           <span className="text-gray-400 italic">غير متوفر</span>
                         )}
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-600">{(rider.hours || 0).toFixed(1)}</td>
-                      <td className="py-4 px-6 text-sm text-gray-600">{(rider.break || 0).toFixed(1)}</td>
-                      <td className="py-4 px-6 text-sm text-gray-600">{(rider.delay || 0).toFixed(1)}</td>
-                      <td className="py-4 px-6 text-sm">
+                      <td className="py-4 px-4 text-sm text-gray-800 font-medium tabular-nums">
+                        {Number.isFinite(rider.workDays) ? rider.workDays : 0}
+                      </td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{(rider.hours || 0).toFixed(1)}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{(rider.break || 0).toFixed(1)}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{(rider.delay || 0).toFixed(1)}</td>
+                      <td className="py-4 px-4 text-sm">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
                             rider.absence === 'نعم'
@@ -381,10 +608,10 @@ export default function RidersPage() {
                           {rider.absence}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-600">{rider.orders}</td>
-                      <td className="py-4 px-6 text-sm text-gray-600">{((rider.acceptance || 0)).toFixed(1)}%</td>
-                      <td className="py-4 px-6 text-sm text-gray-600">{((rider.debt || 0)).toFixed(2)}</td>
-                      <td className="py-4 px-6 text-sm">
+                      <td className="py-4 px-4 text-sm text-gray-600">{rider.orders}</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{((rider.acceptance || 0)).toFixed(1)}%</td>
+                      <td className="py-4 px-4 text-sm text-gray-600">{((rider.debt || 0)).toFixed(2)}</td>
+                      <td className="py-4 px-4 text-sm">
                         <button
                           onClick={() => handleRequestTermination(rider)}
                           className="px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-xs font-medium"
@@ -396,8 +623,10 @@ export default function RidersPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={11} className="py-12 text-center text-gray-500">
-                      {riders.length === 0 ? 'لا توجد بيانات متاحة' : 'لا توجد نتائج مطابقة للبحث'}
+                    <td colSpan={12} className="py-12 text-center text-gray-500">
+                      {riders.length === 0
+                        ? 'لا توجد بيانات متاحة'
+                        : 'لا توجد نتائج مطابقة للبحث أو فلاتر الأعمدة'}
                     </td>
                   </tr>
                 )}

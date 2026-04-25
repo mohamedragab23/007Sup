@@ -62,13 +62,15 @@ export async function getSupervisorDebtsFiltered(supervisorCode: string) {
 /**
  * Get supervisor's performance data
  */
+/** Pass `null` to include all riders in the sheet (admin / cross-supervisor analytics). */
 export async function getSupervisorPerformanceFiltered(
-  supervisorCode: string,
+  supervisorCode: string | null,
   startDate?: Date,
   endDate?: Date
 ) {
   try {
-    const riders = await getSupervisorRiders(supervisorCode);
+    const allRidersMode = supervisorCode === null;
+
     // Normalize rider codes to avoid mismatch between "00123" vs "123" etc.
     const normalizeCode = (code: any): string => {
       const s = (code ?? '').toString().trim();
@@ -76,11 +78,18 @@ export async function getSupervisorPerformanceFiltered(
       // Keep original for exact matches, but also allow matching without leading zeros
       return s.replace(/^0+/, '') || '0';
     };
-    const riderCodesExact = new Set(riders.map((r) => (r.code ?? '').toString().trim()));
-    const riderCodesNormalized = new Set(riders.map((r) => normalizeCode(r.code)));
 
-    if (riderCodesExact.size === 0) {
-      return [];
+    let riderCodesExact: Set<string> | null = null;
+    let riderCodesNormalized: Set<string> | null = null;
+
+    if (!allRidersMode) {
+      const riders = await getSupervisorRiders(supervisorCode);
+      riderCodesExact = new Set(riders.map((r) => (r.code ?? '').toString().trim()));
+      riderCodesNormalized = new Set(riders.map((r) => normalizeCode(r.code)));
+
+      if (riderCodesExact.size === 0) {
+        return [];
+      }
     }
 
     const allData = await getSheetData('البيانات اليومية');
@@ -220,7 +229,9 @@ export async function getSupervisorPerformanceFiltered(
 
       const riderCode = row[1].toString().trim();
       const riderCodeNorm = normalizeCode(riderCode);
-      if (!riderCodesExact.has(riderCode) && !riderCodesNormalized.has(riderCodeNorm)) continue;
+      if (!allRidersMode && riderCodesExact && riderCodesNormalized) {
+        if (!riderCodesExact.has(riderCode) && !riderCodesNormalized.has(riderCodeNorm)) continue;
+      }
 
       // Parse date with improved handling
       const rowDate = parseDate(row[0]);
@@ -263,40 +274,50 @@ export async function getSupervisorPerformanceFiltered(
     }
 
     // Enhanced debug logging (always log for troubleshooting)
-    console.log(`[Performance Filter] Supervisor: ${supervisorCode}`);
+    console.log(`[Performance Filter] Supervisor: ${allRidersMode ? 'ALL' : supervisorCode}`);
     console.log(`[Performance Filter] Date Range: ${normalizedStartDate?.toISOString().split('T')[0]} to ${normalizedEndDate?.toISOString().split('T')[0]}`);
     console.log(
-      `[Performance Filter] Total rows in sheet: ${allData.length - 1}, Rider codes assigned: ${riderCodesExact.size} (normalized: ${riderCodesNormalized.size})`
+      `[Performance Filter] Total rows in sheet: ${allData.length - 1}, Mode: ${allRidersMode ? 'all riders' : `assigned (${riderCodesExact?.size ?? 0} codes)`}`
     );
     console.log(`[Performance Filter] Found: ${filtered.length} records`);
     
     if (filtered.length === 0 && allData.length > 1) {
       console.warn(`[Performance Filter] ⚠️ No data found for date range!`);
-      console.warn(`[Performance Filter] Supervisor rider codes: ${Array.from(riderCodesExact).slice(0, 10).join(', ')}`);
-      
+      if (!allRidersMode && riderCodesExact) {
+        console.warn(`[Performance Filter] Supervisor rider codes: ${Array.from(riderCodesExact).slice(0, 10).join(', ')}`);
+      }
+
       // Collect unique dates in the sheet
       const uniqueDates = new Set<string>();
       const assignedRiderDates: { date: string; riderCode: string }[] = [];
-      
+
       for (let i = 1; i < allData.length; i++) {
         if (allData[i][0] && allData[i][1]) {
           const sampleDate = parseDate(allData[i][0]);
-          const riderCode = allData[i][1]?.toString().trim();
-          
+          const riderCodeRow = allData[i][1]?.toString().trim();
+
           if (sampleDate) {
             const dateStr = sampleDate.toISOString().split('T')[0];
             uniqueDates.add(dateStr);
-            
-            // Check if this rider is assigned to the supervisor
-            if (riderCodesExact.has(riderCode) || riderCodesNormalized.has(normalizeCode(riderCode))) {
-              assignedRiderDates.push({ date: dateStr, riderCode });
+
+            if (!allRidersMode && riderCodesExact && riderCodesNormalized) {
+              if (
+                riderCodesExact.has(riderCodeRow) ||
+                riderCodesNormalized.has(normalizeCode(riderCodeRow))
+              ) {
+                assignedRiderDates.push({ date: dateStr, riderCode: riderCodeRow });
+              }
             }
           }
         }
       }
-      
+
       console.warn(`[Performance Filter] Unique dates in sheet: ${Array.from(uniqueDates).sort().slice(-10).join(', ')}`);
-      console.warn(`[Performance Filter] Assigned rider dates (first 10): ${JSON.stringify(assignedRiderDates.slice(0, 10))}`);
+      if (!allRidersMode) {
+        console.warn(
+          `[Performance Filter] Assigned rider dates (first 10): ${JSON.stringify(assignedRiderDates.slice(0, 10))}`
+        );
+      }
     } else if (filtered.length > 0) {
       console.log(`[Performance Filter] ✅ Successfully filtered ${filtered.length} records`);
       // Log first few filtered records

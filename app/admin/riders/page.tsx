@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ExcelUpload from '@/components/ExcelUpload';
@@ -16,7 +16,28 @@ interface Rider {
   status?: string;
 }
 
+interface RiderPerformanceRow {
+  code: string;
+  name: string;
+  region?: string;
+  supervisorCode?: string;
+  supervisorName?: string;
+  hours: number;
+  break: number;
+  delay: number;
+  absence: string;
+  orders: number;
+  acceptance: number;
+  debt: number;
+  date: string;
+  workDays: number;
+}
+
 export default function AdminRidersPage() {
+  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const [perfStart, setPerfStart] = useState(todayIso);
+  const [perfEnd, setPerfEnd] = useState(todayIso);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRider, setEditingRider] = useState<Rider | null>(null);
   const [formData, setFormData] = useState<Partial<Rider>>({
@@ -56,6 +77,30 @@ export default function AdminRidersPage() {
       const data = await res.json();
       return data.success ? data.data : [];
     },
+  });
+
+  const {
+    data: perfRows = [],
+    isLoading: perfLoading,
+    isFetching: perfFetching,
+    error: perfError,
+  } = useQuery({
+    queryKey: ['admin', 'riders-performance', perfStart, perfEnd],
+    queryFn: async () => {
+      const token = localStorage.getItem('token');
+      const url = new URL('/api/admin/riders-performance', window.location.origin);
+      url.searchParams.set('startDate', perfStart);
+      url.searchParams.set('endDate', perfEnd);
+      const res = await fetch(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'فشل تحميل أداء المناديب');
+      }
+      return data.data as RiderPerformanceRow[];
+    },
+    enabled: Boolean(perfStart && perfEnd),
   });
 
   const addMutation = useMutation({
@@ -168,6 +213,117 @@ export default function AdminRidersPage() {
           >
             + إضافة مندوب
           </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-[#1e1e2f]">
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">أداء المناديب (جميع المشرفين)</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            نفس أعمدة أداء المشرف: اختر الفترة لعرض التجميع اليومي لكل المناديب مع المشرف المسؤول.
+          </p>
+          <div className="flex flex-wrap gap-4 items-end mb-4">
+            <div>
+              <label htmlFor="admin-perf-start" className="block text-sm font-medium text-gray-700 mb-1">
+                من تاريخ
+              </label>
+              <input
+                id="admin-perf-start"
+                type="date"
+                value={perfStart}
+                onChange={(e) => setPerfStart(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label htmlFor="admin-perf-end" className="block text-sm font-medium text-gray-700 mb-1">
+                إلى تاريخ
+              </label>
+              <input
+                id="admin-perf-end"
+                type="date"
+                value={perfEnd}
+                onChange={(e) => setPerfEnd(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            {perfFetching && !perfLoading && (
+              <span className="text-sm text-gray-500">جاري التحديث...</span>
+            )}
+          </div>
+          {perfError && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {(perfError as Error).message}
+            </div>
+          )}
+          <div className="overflow-x-auto rounded-lg border border-gray-100">
+            <table className="w-full min-w-[1100px] text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">الكود</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 min-w-[160px]">الاسم</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 min-w-[140px]">المشرف</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">المنطقة</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">الفترة</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 whitespace-nowrap">أيام العمل</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">ساعات</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">بريك</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">تأخير</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">غياب</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">طلبات</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">قبول %</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700">مديونية</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {perfLoading ? (
+                  <tr>
+                    <td colSpan={13} className="py-10 text-center text-gray-500">
+                      جاري تحميل الأداء...
+                    </td>
+                  </tr>
+                ) : perfRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={13} className="py-10 text-center text-gray-500">
+                      لا توجد بيانات في هذه الفترة
+                    </td>
+                  </tr>
+                ) : (
+                  perfRows.map((r, i) => (
+                    <tr key={`perf-${r.code}-${i}`} className="hover:bg-gray-50">
+                      <td className="py-2 px-3 text-gray-800">{r.code}</td>
+                      <td className="py-2 px-3 text-gray-800 font-medium break-words">{r.name}</td>
+                      <td className="py-2 px-3 text-gray-600">
+                        {r.supervisorCode && r.supervisorCode.trim() !== '' ? (
+                          <>
+                            {r.supervisorName || '—'} <span className="text-gray-400">({r.supervisorCode})</span>
+                          </>
+                        ) : (
+                          <span className="text-gray-400 italic">—</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-3 text-gray-600">{r.region || '—'}</td>
+                      <td className="py-2 px-3 text-gray-600 whitespace-nowrap">{r.date}</td>
+                      <td className="py-2 px-3 font-medium tabular-nums">{r.workDays ?? 0}</td>
+                      <td className="py-2 px-3 tabular-nums">{(r.hours || 0).toFixed(1)}</td>
+                      <td className="py-2 px-3 tabular-nums">{(r.break || 0).toFixed(1)}</td>
+                      <td className="py-2 px-3 tabular-nums">{(r.delay || 0).toFixed(1)}</td>
+                      <td className="py-2 px-3">
+                        <span
+                          className={`inline-block rounded-full px-2 py-0.5 text-xs ${
+                            r.absence === 'نعم' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {r.absence}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 tabular-nums">{r.orders}</td>
+                      <td className="py-2 px-3 tabular-nums">{(r.acceptance || 0).toFixed(1)}%</td>
+                      <td className="py-2 px-3 tabular-nums">{(r.debt || 0).toFixed(2)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
