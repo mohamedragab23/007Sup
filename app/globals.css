@@ -64,7 +64,29 @@ body {
 /* Convert legacy light surfaces to Dashboard-like glass surfaces. */
 .app-theme .bg-white,
 .app-theme .bg-gray-50,
-.app-theme .bg-gray-100 {
+.app-theme .bg-gray-100,
+.app-theme .bg-blue-50,
+.app-theme .bg-green-50,
+.app-theme .bg-yellow-50,
+.app-theme .bg-red-50,
+.app-theme .bg-amber-50,
+.app-theme .bg-purple-50,
+.app-theme .bg-indigo-50,
+.app-theme .bg-sky-50,
+.app-theme .bg-teal-50,
+.app-theme .bg-emerald-50,
+.app-theme .bg-orange-50,
+.app-theme .bg-blue-100,
+.app-theme .bg-green-100,
+.app-theme .bg-yellow-100,
+.app-theme .bg-red-100,
+.app-theme .bg-amber-100,
+.app-theme .bg-purple-100,
+.app-theme .bg-indigo-100,
+.app-theme .bg-sky-100,
+.app-theme .bg-teal-100,
+.app-theme .bg-emerald-100,
+.app-theme .bg-orange-100 {
   background-color: rgba(255, 255, 255, 0.06) !important;
   color: #eaf0ff;
 }
