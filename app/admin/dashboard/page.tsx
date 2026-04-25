@@ -114,13 +114,13 @@ export default function AdminDashboardPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">لوحة تحكم المدير</h1>
-          <p className="text-gray-600">نظرة عامة على النظام</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">لوحة تحكم المدير</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">نظرة عامة على النظام</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {statCards.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+            <div key={index} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
               <div className="flex items-center justify-between mb-4">
                 <div className={`${stat.color} p-3 rounded-lg text-white text-2xl`}>{stat.icon}</div>
               </div>
@@ -176,7 +176,7 @@ export default function AdminDashboardPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">إجراءات سريعة</h3>
             <div className="space-y-3">
               <a
@@ -212,7 +212,7 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">إحصائيات سريعة</h3>
             <div className="space-y-4">
               <div className="flex justify-between items-center">

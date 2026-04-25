@@ -110,12 +110,12 @@ export default function SalaryPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">حساب الراتب</h1>
-          <p className="text-gray-600">تفاصيل الراتب والخصومات</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">حساب الراتب</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">تفاصيل الراتب والخصومات</p>
         </div>
 
         {/* Date Range Selector - No auto-reload */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <label htmlFor="salary-start-date" className="block text-sm font-medium text-gray-700 mb-2">من تاريخ</label>

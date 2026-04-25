@@ -195,8 +195,8 @@ export default function AdminSupervisorsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">إدارة المشرفين</h1>
-            <p className="text-gray-600">إضافة وتعديل وحذف المشرفين</p>
+            <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">إدارة المشرفين</h1>
+            <p className="text-[rgba(234,240,255,0.70)]">إضافة وتعديل وحذف المشرفين</p>
           </div>
           <button
             onClick={() => {
@@ -210,9 +210,9 @@ export default function AdminSupervisorsPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-[#1e1e2f]">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[1100px]">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="text-right py-4 px-6 text-sm font-semibold text-gray-700">الكود</th>
@@ -235,7 +235,9 @@ export default function AdminSupervisorsPage() {
                   supervisors.map((supervisor: Supervisor, index: number) => (
                     <tr key={`supervisor-${supervisor.code}-${index}`} className="hover:bg-gray-50">
                       <td className="py-4 px-6 text-sm text-gray-800">{supervisor.code}</td>
-                      <td className="py-4 px-6 text-sm text-gray-800 font-medium">{supervisor.name}</td>
+                      <td className="py-4 px-6 text-sm text-gray-800 font-medium whitespace-normal break-words min-w-[240px]">
+                        {supervisor.name}
+                      </td>
                       <td className="py-4 px-6 text-sm text-gray-600">{supervisor.region}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">{supervisor.email}</td>
                       <td className="py-4 px-6 text-sm text-gray-600">
@@ -295,7 +297,7 @@ export default function AdminSupervisorsPage() {
 
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto text-[#1e1e2f]">
               <div className="p-6 border-b">
                 <h2 className="text-2xl font-bold text-gray-800">
                   {editingSupervisor ? 'تعديل مشرف' : 'إضافة مشرف جديد'}

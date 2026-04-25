@@ -84,12 +84,14 @@ export default function PerformancePage() {
     <Layout>
       <div className="space-y-6 min-w-0">
         <div className="min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">تتبع الأداء</h1>
-          <p className="text-gray-600 text-sm sm:text-base break-words">تحليل أداء المناديب خلال فترة محددة - حدد التاريخ لعرض البيانات</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#EAF0FF] mb-2 break-words">تتبع الأداء</h1>
+          <p className="text-[rgba(234,240,255,0.70)] text-sm sm:text-base break-words">
+            تحليل أداء المناديب خلال فترة محددة - حدد التاريخ لعرض البيانات
+          </p>
         </div>
 
         {/* Date Selection */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 min-w-0 overflow-hidden text-[#1e1e2f]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
               <label htmlFor="performance-start-date" className="block text-sm font-medium text-gray-700 mb-2">من تاريخ</label>
@@ -215,7 +217,7 @@ export default function PerformancePage() {
 
         {/* Target vs Achievement (if target exists) */}
         {performanceStats?.target && (
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
             <h3 className="text-lg font-bold text-gray-800 mb-4">الهدف مقابل الإنجاز</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-gray-50 rounded-lg">
@@ -254,7 +256,7 @@ export default function PerformancePage() {
         {performanceStats && performanceStats.labels && performanceStats.labels.length > 0 ? (
           <PerformanceChart startDate={startDate} endDate={endDate} />
         ) : startDate && endDate && !isLoading ? (
-          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-100 text-center">
+          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-100 text-center text-[#1e1e2f]">
             <p className="text-gray-500 text-lg mb-2">لا توجد بيانات متاحة</p>
             <p className="text-sm text-gray-400">
               للفترة من {new Date(startDate).toLocaleDateString('ar-EG', {
@@ -272,7 +274,7 @@ export default function PerformancePage() {
             </p>
           </div>
         ) : isLoading ? (
-          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-100 text-center">
+          <div className="bg-white rounded-xl shadow-sm p-8 border border-gray-100 text-center text-[#1e1e2f]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="mt-4 text-gray-600">جاري تحميل البيانات...</p>
           </div>
