@@ -6,6 +6,7 @@ import DashboardStats from '@/components/DashboardStats';
 import PerformanceChart from '@/components/PerformanceChart';
 import TopRidersTable from '@/components/TopRidersTable';
 import { StatsSkeleton, TableSkeleton } from '@/components/SkeletonLoader';
+import TopRidersMiniChart from '@/components/TopRidersMiniChart';
 import Card from '@/components/ui-v2/Card';
 import Button from '@/components/ui-v2/Button';
 import Tabs, { type TabItem } from '@/components/ui-v2/Tabs';
@@ -510,7 +511,14 @@ export default function DashboardPage() {
             <DashboardStats data={dashboardData} />
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <PerformanceChart />
-              <TopRidersTable topRiders={dashboardData.topRiders} />
+              <div className="space-y-3">
+                <TopRidersTable topRiders={dashboardData.topRiders} />
+                {dashboardData.topRiders?.length > 0 && (
+                  <Card title="مقارنة أفضل المناديب" subtitle="الطلبات مقابل الساعات (من نفس البيانات المعروضة)">
+                    <TopRidersMiniChart topRiders={dashboardData.topRiders} />
+                  </Card>
+                )}
+              </div>
             </div>
           </>
         )}
