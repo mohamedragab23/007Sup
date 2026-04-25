@@ -41,6 +41,55 @@ body {
   min-width: 0;
 }
 
+/* -------------------------------------------------------------------------- */
+/* Global theme normalization (UI only)                                       */
+/*                                                                            */
+/* Many pages still use legacy Tailwind grays (text-gray-*) + white surfaces. */
+/* With the new dark Layout, those utilities can become low-contrast.         */
+/* These rules safely remap legacy grays to the new dark theme, while         */
+/* explicitly restoring dark text inside white cards/modals.                  */
+/* -------------------------------------------------------------------------- */
+.app-theme .text-gray-900,
+.app-theme .text-gray-800,
+.app-theme .text-gray-700 {
+  color: #eaf0ff;
+}
+
+.app-theme .text-gray-600,
+.app-theme .text-gray-500,
+.app-theme .text-gray-400 {
+  color: rgba(234, 240, 255, 0.7);
+}
+
+/* White surfaces should always render readable dark text. */
+.app-theme .bg-white {
+  color: #1e1e2f;
+}
+
+.app-theme .bg-white .text-gray-900,
+.app-theme .bg-white .text-gray-800,
+.app-theme .bg-white .text-gray-700 {
+  color: #1e1e2f;
+}
+
+.app-theme .bg-white .text-gray-600,
+.app-theme .bg-white .text-gray-500,
+.app-theme .bg-white .text-gray-400 {
+  color: rgba(30, 30, 47, 0.75);
+}
+
+.app-theme .bg-white .text-blue-600 {
+  color: #2563eb;
+}
+
+.app-theme .bg-white .text-red-600 {
+  color: #dc2626;
+}
+
+.app-theme .bg-white .text-green-600 {
+  color: #16a34a;
+}
+
 /* Table scroll containers: allow horizontal scroll inside, no page overflow */
 @media (max-width: 768px) {
   .overflow-x-auto {

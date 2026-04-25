@@ -202,8 +202,8 @@ export default function AssignmentRequestsPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">طلبات التعيين</h1>
-          <p className="text-gray-600">إدارة طلبات تعيين المناديب للمشرفين</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">طلبات التعيين</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">إدارة طلبات تعيين المناديب للمشرفين</p>
         </div>
 
         {/* Status Filter */}
@@ -291,7 +291,7 @@ export default function AssignmentRequestsPage() {
               </div>
             )}
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[1100px]">
                 <thead className="bg-gray-50">
                   <tr>
                     {pendingRequests.length > 0 && (

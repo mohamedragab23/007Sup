@@ -177,8 +177,8 @@ export default function SalaryConfigPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">إعدادات الرواتب</h1>
-          <p className="text-gray-600">تكوين طريقة حساب الراتب لكل مشرف</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">إعدادات الرواتب</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">تكوين طريقة حساب الراتب لكل مشرف</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-6">
@@ -430,7 +430,7 @@ export default function SalaryConfigPage() {
         </form>
 
         {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-[#1e1e2f]">
           <h3 className="font-semibold text-blue-800 mb-2">معلومات عن أنظمة الرواتب</h3>
           <div className="text-sm text-blue-700 space-y-2">
             <div>

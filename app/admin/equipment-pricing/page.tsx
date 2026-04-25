@@ -105,8 +105,8 @@ export default function EquipmentPricingPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">أسعار المعدات</h1>
-          <p className="text-gray-600">تحديد أسعار المعدات لحساب الخصومات تلقائياً</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">أسعار المعدات</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">تحديد أسعار المعدات لحساب الخصومات تلقائياً</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 space-y-6">
@@ -234,7 +234,7 @@ export default function EquipmentPricingPage() {
         </form>
 
         {/* Example Calculation */}
-        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-[#1e1e2f]">
           <h3 className="font-bold text-green-800 mb-4 text-lg">📊 مثال على حساب تكلفة المعدات</h3>
           <div className="bg-white rounded-lg p-4 mb-4">
             <p className="text-sm text-gray-600 mb-2">للمشرف MHL-001:</p>
@@ -281,7 +281,7 @@ export default function EquipmentPricingPage() {
         </div>
 
         {/* Google Sheets Structure Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-[#1e1e2f]">
           <h3 className="font-bold text-blue-800 mb-4 text-lg">📋 هيكل شيت المعدات في Google Sheets</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">

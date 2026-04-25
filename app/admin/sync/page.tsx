@@ -42,8 +42,8 @@ export default function SyncPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">مزامنة البيانات</h1>
-          <p className="text-gray-600">مزامنة قاعدة البيانات المحلية مع Google Sheets</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">مزامنة البيانات</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">مزامنة قاعدة البيانات المحلية مع Google Sheets</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">

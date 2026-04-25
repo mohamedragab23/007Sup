@@ -24,8 +24,8 @@ export default function AdminDebtsPage() {
       <Layout>
         <div className="space-y-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">إدارة الديون</h1>
-            <p className="text-gray-600">جاري تحميل البيانات...</p>
+            <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">إدارة الديون</h1>
+            <p className="text-[rgba(234,240,255,0.70)]">جاري تحميل البيانات...</p>
           </div>
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
             <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
@@ -41,8 +41,8 @@ export default function AdminDebtsPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">إدارة الديون</h1>
-          <p className="text-gray-600">عرض وإدارة ديون المناديب</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">إدارة الديون</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">عرض وإدارة ديون المناديب</p>
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

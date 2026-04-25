@@ -116,8 +116,8 @@ export default function AdminDebugPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">🔍 التحقق من البيانات</h1>
-          <p className="text-gray-600">فحص البيانات في Google Sheets والتحقق من الفلترة</p>
+          <h1 className="text-3xl font-semibold text-[#EAF0FF] mb-2">🔍 التحقق من البيانات</h1>
+          <p className="text-[rgba(234,240,255,0.70)]">فحص البيانات في Google Sheets والتحقق من الفلترة</p>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm p-6 border border-red-200">

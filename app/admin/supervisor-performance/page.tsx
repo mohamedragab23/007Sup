@@ -90,8 +90,8 @@ export default function SupervisorPerformancePage() {
     <Layout>
       <div className="space-y-6 min-w-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 break-words">أداء المشرفين</h1>
-          <p className="text-gray-600 text-sm sm:text-base break-words">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#EAF0FF] mb-2 break-words">أداء المشرفين</h1>
+          <p className="text-[rgba(234,240,255,0.70)] text-sm sm:text-base break-words">
             عرض أداء كل مشرف بناءً على أداء مناديبه خلال الفترة المحددة — تقرير مفصل مع شرح المؤشرات
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function SupervisorPerformancePage() {
 
         {/* شرح المؤشرات */}
         {data && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 sm:p-5 text-[#1e1e2f]">
             <h3 className="font-bold text-amber-900 mb-3">📖 شرح المؤشرات — كيف تقرأ التقرير</h3>
             <ul className="text-sm text-amber-800 space-y-2 list-disc list-inside">
               <li><strong>عدد المناديب:</strong> عدد المناديب المسجلين تحت هذا المشرف في الفترة.</li>
@@ -158,7 +158,7 @@ export default function SupervisorPerformancePage() {
         {data && summary && (
           <>
             {/* ملخص التقرير */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-5">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 sm:p-5 text-[#1e1e2f]">
               <h3 className="font-bold text-blue-900 mb-3">📊 ملخص التقرير — الفترة من {data.start_date} إلى {data.end_date}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div className="bg-white rounded-lg p-3 border border-blue-100">
