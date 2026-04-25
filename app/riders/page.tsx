@@ -230,7 +230,7 @@ export default function RidersPage() {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 text-[#1e1e2f]">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <label htmlFor="riders-start-date" className="block text-sm font-medium text-gray-700 mb-2">من تاريخ</label>
@@ -313,7 +313,7 @@ export default function RidersPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden text-[#1e1e2f]">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px]">
               <thead className="bg-gray-50">
