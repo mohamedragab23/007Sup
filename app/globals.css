@@ -47,7 +47,7 @@ body {
 /* Many pages still use legacy Tailwind grays (text-gray-*) + white surfaces. */
 /* With the new dark Layout, those utilities can become low-contrast.         */
 /* These rules safely remap legacy grays to the new dark theme, while         */
-/* explicitly restoring dark text inside white cards/modals.                  */
+/* moving legacy "white cards" into the same glass surfaces as Dashboard.     */
 /* -------------------------------------------------------------------------- */
 .app-theme .text-gray-900,
 .app-theme .text-gray-800,
@@ -61,34 +61,49 @@ body {
   color: rgba(234, 240, 255, 0.7);
 }
 
-/* White surfaces should always render readable dark text. */
-.app-theme .bg-white {
-  color: #1e1e2f;
+/* Convert legacy light surfaces to Dashboard-like glass surfaces. */
+.app-theme .bg-white,
+.app-theme .bg-gray-50,
+.app-theme .bg-gray-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: #eaf0ff;
 }
 
-.app-theme .bg-white .text-gray-900,
-.app-theme .bg-white .text-gray-800,
-.app-theme .bg-white .text-gray-700 {
-  color: #1e1e2f;
+.app-theme .border-gray-100,
+.app-theme .border-gray-200,
+.app-theme .border-gray-300 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
 }
 
-.app-theme .bg-white .text-gray-600,
-.app-theme .bg-white .text-gray-500,
-.app-theme .bg-white .text-gray-400 {
-  color: rgba(30, 30, 47, 0.75);
+.app-theme .shadow-sm,
+.app-theme .shadow,
+.app-theme .shadow-lg {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35) !important;
 }
 
-.app-theme .bg-white .text-blue-600 {
-  color: #2563eb;
+/* Add glass effect for common card containers. */
+.app-theme .rounded-xl {
+  backdrop-filter: blur(12px);
 }
 
-.app-theme .bg-white .text-red-600 {
-  color: #dc2626;
+/* Inputs/selects inside the dark theme should not look "old white". */
+.app-theme input,
+.app-theme select,
+.app-theme textarea {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: #eaf0ff;
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
-.app-theme .bg-white .text-green-600 {
-  color: #16a34a;
+.app-theme input::placeholder,
+.app-theme textarea::placeholder {
+  color: rgba(234, 240, 255, 0.55);
 }
+
+/* Keep status colors readable on dark background. */
+.app-theme .text-blue-600 { color: #60a5fa; }
+.app-theme .text-green-600 { color: #4ade80; }
+.app-theme .text-red-600 { color: #fb7185; }
 
 /* Table scroll containers: allow horizontal scroll inside, no page overflow */
 @media (max-width: 768px) {
