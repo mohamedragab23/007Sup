@@ -1,9 +1,24 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import { useQuery } from '@tanstack/react-query';
 import * as XLSX from 'xlsx';
+import {
+  RidersExcelColumnMenu,
+  defaultTextFilter,
+  defaultNumFilter,
+  defaultAbsenceFilter,
+  type TextFilterState,
+  type NumFilterState,
+  type AbsenceFilterState,
+} from '@/components/RidersExcelColumnMenu';
+import {
+  applyRiderTableFilters,
+  type RiderColumnFilters,
+  type RiderSortState,
+  RIDER_NUM_FILTER_KEYS,
+  type RiderNumFilterKey,
+} from '@/lib/ridersTableFilter';
 
 interface RiderData {
   code: string;
@@ -39,19 +54,37 @@ export default function RidersPage() {
   const [terminationReason, setTerminationReason] = useState('');
   const [terminationLoading, setTerminationLoading] = useState(false);
 
-  const [fHoursMin, setFHoursMin] = useState('');
-  const [fHoursMax, setFHoursMax] = useState('');
-  const [fBreakMin, setFBreakMin] = useState('');
-  const [fBreakMax, setFBreakMax] = useState('');
-  const [fDelayMin, setFDelayMin] = useState('');
-  const [fDelayMax, setFDelayMax] = useState('');
-  const [fAbsence, setFAbsence] = useState<'all' | 'نعم' | 'لا'>('all');
-  const [fOrdersMin, setFOrdersMin] = useState('');
-  const [fOrdersMax, setFOrdersMax] = useState('');
-  const [fAcceptMin, setFAcceptMin] = useState('');
-  const [fAcceptMax, setFAcceptMax] = useState('');
-  const [fDebtMin, setFDebtMin] = useState('');
-  const [fDebtMax, setFDebtMax] = useState('');
+  const [filters, setFilters] = useState<RiderColumnFilters>(() => ({
+    code: defaultTextFilter(),
+    name: defaultTextFilter(),
+    date: defaultTextFilter(),
+    workDays: defaultNumFilter(),
+    hours: defaultNumFilter(),
+    break: defaultNumFilter(),
+    delay: defaultNumFilter(),
+    orders: defaultNumFilter(),
+    acceptance: defaultNumFilter(),
+    debt: defaultNumFilter(),
+    absence: defaultAbsenceFilter(),
+  }));
+  const [sort, setSort] = useState<RiderSortState>({ col: null, dir: 'asc' });
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+
+  const setNumFilter = useCallback((key: RiderNumFilterKey, f: NumFilterState) => {
+    setFilters((prev) => {
+      const next = { ...prev, [key]: f };
+      if (f.op === 'top10' || f.op === 'bottom10') {
+        for (const k of RIDER_NUM_FILTER_KEYS) {
+          if (k === key) continue;
+          const o = next[k];
+          if (o.op === 'top10' || o.op === 'bottom10') {
+            next[k] = defaultNumFilter();
+          }
+        }
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     fetchRiders();
@@ -63,64 +96,30 @@ export default function RidersPage() {
       ? riders
       : riders.filter((r) => (r.code || '').toString().trim().toLowerCase().includes(normalizedSearchCode));
 
-  const parseNum = (s: string) => {
-    const t = s.trim();
-    if (t === '') return null;
-    const n = parseFloat(t);
-    return Number.isFinite(n) ? n : null;
-  };
-
-  const inNumRange = (value: number, minS: string, maxS: string) => {
-    const mn = parseNum(minS);
-    const mx = parseNum(maxS);
-    if (mn !== null && value < mn) return false;
-    if (mx !== null && value > mx) return false;
-    return true;
-  };
-
-  const columnFilteredRiders = useMemo(() => {
-    return visibleRiders.filter((r) => {
-      if (!inNumRange(Number(r.hours) || 0, fHoursMin, fHoursMax)) return false;
-      if (!inNumRange(Number(r.break) || 0, fBreakMin, fBreakMax)) return false;
-      if (!inNumRange(Number(r.delay) || 0, fDelayMin, fDelayMax)) return false;
-      if (fAbsence !== 'all' && (r.absence || '').trim() !== fAbsence) return false;
-      if (!inNumRange(Number(r.orders) || 0, fOrdersMin, fOrdersMax)) return false;
-      if (!inNumRange(Number(r.acceptance) || 0, fAcceptMin, fAcceptMax)) return false;
-      if (!inNumRange(Number(r.debt) || 0, fDebtMin, fDebtMax)) return false;
-      return true;
-    });
-  }, [
-    visibleRiders,
-    fHoursMin,
-    fHoursMax,
-    fBreakMin,
-    fBreakMax,
-    fDelayMin,
-    fDelayMax,
-    fAbsence,
-    fOrdersMin,
-    fOrdersMax,
-    fAcceptMin,
-    fAcceptMax,
-    fDebtMin,
-    fDebtMax,
-  ]);
+  const columnFilteredRiders = useMemo(
+    () => applyRiderTableFilters(visibleRiders, filters, sort),
+    [visibleRiders, filters, sort]
+  );
 
   const clearColumnFilters = () => {
-    setFHoursMin('');
-    setFHoursMax('');
-    setFBreakMin('');
-    setFBreakMax('');
-    setFDelayMin('');
-    setFDelayMax('');
-    setFAbsence('all');
-    setFOrdersMin('');
-    setFOrdersMax('');
-    setFAcceptMin('');
-    setFAcceptMax('');
-    setFDebtMin('');
-    setFDebtMax('');
+    setFilters({
+      code: defaultTextFilter(),
+      name: defaultTextFilter(),
+      date: defaultTextFilter(),
+      workDays: defaultNumFilter(),
+      hours: defaultNumFilter(),
+      break: defaultNumFilter(),
+      delay: defaultNumFilter(),
+      orders: defaultNumFilter(),
+      acceptance: defaultNumFilter(),
+      debt: defaultNumFilter(),
+      absence: defaultAbsenceFilter(),
+    });
+    setSort({ col: null, dir: 'asc' });
+    setOpenMenu(null);
   };
+
+  const sortDirFor = (col: string): 'asc' | 'desc' | null => (sort.col === col ? sort.dir : null);
 
   const fetchRiders = async (forceRefresh: boolean = false) => {
     try {
@@ -403,156 +402,271 @@ export default function RidersPage() {
             <table className="w-full min-w-[1280px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الكود</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 min-w-[200px]">الاسم</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">التاريخ</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 whitespace-nowrap">عدد أيام العمل</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">ساعات العمل</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">البريك</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">التأخير</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الغياب</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">الطلبات</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">نسبة القبول</th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">المديونية</th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">الكود</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'code'}
+                        onOpen={() => setOpenMenu('code')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="text"
+                        textFilter={filters.code}
+                        onTextChange={(f: TextFilterState) => setFilters((p) => ({ ...p, code: f }))}
+                        onSortAsc={() => {
+                          setSort({ col: 'code', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'code', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('code')}
+                        ariaLabel="فلتر وفرز عمود الكود"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 min-w-[200px] align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">الاسم</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'name'}
+                        onOpen={() => setOpenMenu('name')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="text"
+                        textFilter={filters.name}
+                        onTextChange={(f: TextFilterState) => setFilters((p) => ({ ...p, name: f }))}
+                        onSortAsc={() => {
+                          setSort({ col: 'name', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'name', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('name')}
+                        ariaLabel="فلتر وفرز عمود الاسم"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">التاريخ</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'date'}
+                        onOpen={() => setOpenMenu('date')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="text"
+                        textFilter={filters.date}
+                        onTextChange={(f: TextFilterState) => setFilters((p) => ({ ...p, date: f }))}
+                        onSortAsc={() => {
+                          setSort({ col: 'date', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'date', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('date')}
+                        ariaLabel="فلتر وفرز عمود التاريخ"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 whitespace-nowrap align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">عدد أيام العمل</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'workDays'}
+                        onOpen={() => setOpenMenu('workDays')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="number"
+                        numFilter={filters.workDays}
+                        onNumChange={(f: NumFilterState) => setNumFilter('workDays', f)}
+                        onSortAsc={() => {
+                          setSort({ col: 'workDays', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'workDays', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('workDays')}
+                        ariaLabel="فلتر وفرز عمود أيام العمل"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">ساعات العمل</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'hours'}
+                        onOpen={() => setOpenMenu('hours')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="number"
+                        numFilter={filters.hours}
+                        onNumChange={(f: NumFilterState) => setNumFilter('hours', f)}
+                        onSortAsc={() => {
+                          setSort({ col: 'hours', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'hours', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('hours')}
+                        ariaLabel="فلتر وفرز عمود ساعات العمل"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">البريك</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'break'}
+                        onOpen={() => setOpenMenu('break')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="number"
+                        numFilter={filters.break}
+                        onNumChange={(f: NumFilterState) => setNumFilter('break', f)}
+                        onSortAsc={() => {
+                          setSort({ col: 'break', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'break', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('break')}
+                        ariaLabel="فلتر وفرز عمود البريك"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">التأخير</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'delay'}
+                        onOpen={() => setOpenMenu('delay')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="number"
+                        numFilter={filters.delay}
+                        onNumChange={(f: NumFilterState) => setNumFilter('delay', f)}
+                        onSortAsc={() => {
+                          setSort({ col: 'delay', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'delay', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('delay')}
+                        ariaLabel="فلتر وفرز عمود التأخير"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">الغياب</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'absence'}
+                        onOpen={() => setOpenMenu('absence')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="absence"
+                        absenceFilter={filters.absence}
+                        onAbsenceChange={(f: AbsenceFilterState) => setFilters((p) => ({ ...p, absence: f }))}
+                        onSortAsc={() => {
+                          setSort({ col: 'absence', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'absence', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('absence')}
+                        ariaLabel="فلتر وفرز عمود الغياب"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">الطلبات</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'orders'}
+                        onOpen={() => setOpenMenu('orders')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="number"
+                        numFilter={filters.orders}
+                        onNumChange={(f: NumFilterState) => setNumFilter('orders', f)}
+                        onSortAsc={() => {
+                          setSort({ col: 'orders', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'orders', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('orders')}
+                        ariaLabel="فلتر وفرز عمود الطلبات"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">نسبة القبول</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'acceptance'}
+                        onOpen={() => setOpenMenu('acceptance')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="number"
+                        numFilter={filters.acceptance}
+                        onNumChange={(f: NumFilterState) => setNumFilter('acceptance', f)}
+                        onSortAsc={() => {
+                          setSort({ col: 'acceptance', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'acceptance', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('acceptance')}
+                        ariaLabel="فلتر وفرز عمود نسبة القبول"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-sm font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">المديونية</span>
+                      <RidersExcelColumnMenu
+                        isOpen={openMenu === 'debt'}
+                        onOpen={() => setOpenMenu('debt')}
+                        onClose={() => setOpenMenu(null)}
+                        variant="number"
+                        numFilter={filters.debt}
+                        onNumChange={(f: NumFilterState) => setNumFilter('debt', f)}
+                        onSortAsc={() => {
+                          setSort({ col: 'debt', dir: 'asc' });
+                          setOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setSort({ col: 'debt', dir: 'desc' });
+                          setOpenMenu(null);
+                        }}
+                        onClearSort={() => setSort({ col: null, dir: 'asc' })}
+                        sortDirection={sortDirFor('debt')}
+                        ariaLabel="فلتر وفرز عمود المديونية"
+                      />
+                    </div>
+                  </th>
                   <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">إجراءات</th>
-                </tr>
-                <tr className="border-t border-gray-200 bg-gray-100/80">
-                  <th className="p-2 px-4" />
-                  <th className="p-2 px-4" />
-                  <th className="p-2 px-4" />
-                  <th className="p-2 px-4" />
-                  <th className="p-2 px-2 align-bottom">
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="من"
-                        value={fHoursMin}
-                        onChange={(e) => setFHoursMin(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="إلى"
-                        value={fHoursMax}
-                        onChange={(e) => setFHoursMax(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-2 px-2 align-bottom">
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="من"
-                        value={fBreakMin}
-                        onChange={(e) => setFBreakMin(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="إلى"
-                        value={fBreakMax}
-                        onChange={(e) => setFBreakMax(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-2 px-2 align-bottom">
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="من"
-                        value={fDelayMin}
-                        onChange={(e) => setFDelayMin(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="إلى"
-                        value={fDelayMax}
-                        onChange={(e) => setFDelayMax(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-2 px-2 align-bottom">
-                    <select
-                      value={fAbsence}
-                      onChange={(e) => setFAbsence(e.target.value as 'all' | 'نعم' | 'لا')}
-                      className="w-full min-w-[5rem] px-2 py-1.5 text-xs border border-gray-300 rounded-md bg-white"
-                    >
-                      <option value="all">الكل</option>
-                      <option value="نعم">نعم</option>
-                      <option value="لا">لا</option>
-                    </select>
-                  </th>
-                  <th className="p-2 px-2 align-bottom">
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="من"
-                        value={fOrdersMin}
-                        onChange={(e) => setFOrdersMin(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="إلى"
-                        value={fOrdersMax}
-                        onChange={(e) => setFOrdersMax(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-2 px-2 align-bottom">
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="من %"
-                        value={fAcceptMin}
-                        onChange={(e) => setFAcceptMin(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="إلى %"
-                        value={fAcceptMax}
-                        onChange={(e) => setFAcceptMax(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-2 px-2 align-bottom">
-                    <div className="flex flex-col gap-1">
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="من"
-                        value={fDebtMin}
-                        onChange={(e) => setFDebtMin(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                      <input
-                        type="number"
-                        step="any"
-                        placeholder="إلى"
-                        value={fDebtMax}
-                        onChange={(e) => setFDebtMax(e.target.value)}
-                        className="w-full min-w-[4.5rem] px-2 py-1 text-xs border border-gray-300 rounded-md bg-white"
-                      />
-                    </div>
-                  </th>
-                  <th className="p-2 px-4" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
