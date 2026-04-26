@@ -1,9 +1,25 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Layout from '@/components/Layout';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import ExcelUpload from '@/components/ExcelUpload';
+import {
+  RidersExcelColumnMenu,
+  defaultTextFilter,
+  defaultNumFilter,
+  defaultAbsenceFilter,
+  type TextFilterState,
+  type NumFilterState,
+  type AbsenceFilterState,
+} from '@/components/RidersExcelColumnMenu';
+import {
+  applyAdminPerfFilters,
+  ADMIN_PERF_NUM_KEYS,
+  type AdminPerfFilters,
+  type AdminPerfNumKey,
+  type AdminPerfSort,
+} from '@/lib/adminRidersPerformanceTableFilter';
 
 interface Rider {
   code: string;
@@ -37,6 +53,63 @@ export default function AdminRidersPage() {
   const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
   const [perfStart, setPerfStart] = useState(todayIso);
   const [perfEnd, setPerfEnd] = useState(todayIso);
+
+  const [perfFilters, setPerfFilters] = useState<AdminPerfFilters>(() => ({
+    code: defaultTextFilter(),
+    name: defaultTextFilter(),
+    supervisor: defaultTextFilter(),
+    region: defaultTextFilter(),
+    date: defaultTextFilter(),
+    workDays: defaultNumFilter(),
+    hours: defaultNumFilter(),
+    break: defaultNumFilter(),
+    delay: defaultNumFilter(),
+    orders: defaultNumFilter(),
+    acceptance: defaultNumFilter(),
+    debt: defaultNumFilter(),
+    absence: defaultAbsenceFilter(),
+  }));
+  const [perfSort, setPerfSort] = useState<AdminPerfSort>({ col: null, dir: 'asc' });
+  const [perfOpenMenu, setPerfOpenMenu] = useState<string | null>(null);
+
+  const setPerfNumFilter = useCallback((key: AdminPerfNumKey, f: NumFilterState) => {
+    setPerfFilters((prev) => {
+      const next: AdminPerfFilters = { ...prev, [key]: f } as AdminPerfFilters;
+      if (f.op === 'top10' || f.op === 'bottom10') {
+        for (const k of ADMIN_PERF_NUM_KEYS) {
+          if (k === key) continue;
+          const other = next[k];
+          if (other.op === 'top10' || other.op === 'bottom10') {
+            next[k] = defaultNumFilter();
+          }
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  const clearPerfFilters = () => {
+    setPerfFilters({
+      code: defaultTextFilter(),
+      name: defaultTextFilter(),
+      supervisor: defaultTextFilter(),
+      region: defaultTextFilter(),
+      date: defaultTextFilter(),
+      workDays: defaultNumFilter(),
+      hours: defaultNumFilter(),
+      break: defaultNumFilter(),
+      delay: defaultNumFilter(),
+      orders: defaultNumFilter(),
+      acceptance: defaultNumFilter(),
+      debt: defaultNumFilter(),
+      absence: defaultAbsenceFilter(),
+    });
+    setPerfSort({ col: null, dir: 'asc' });
+    setPerfOpenMenu(null);
+  };
+
+  const perfSortDirFor = (col: string): 'asc' | 'desc' | null =>
+    perfSort.col === col ? perfSort.dir : null;
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingRider, setEditingRider] = useState<Rider | null>(null);
@@ -102,6 +175,11 @@ export default function AdminRidersPage() {
     },
     enabled: Boolean(perfStart && perfEnd),
   });
+
+  const filteredPerfRows = useMemo(
+    () => applyAdminPerfFilters(perfRows, perfFilters, perfSort),
+    [perfRows, perfFilters, perfSort]
+  );
 
   const addMutation = useMutation({
     mutationFn: async (rider: Rider) => {
@@ -248,6 +326,14 @@ export default function AdminRidersPage() {
             {perfFetching && !perfLoading && (
               <span className="text-sm text-gray-500">جاري التحديث...</span>
             )}
+            <button
+              type="button"
+              onClick={clearPerfFilters}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              title="مسح فلاتر/فرز جدول الأداء"
+            >
+              مسح فلاتر الأداء
+            </button>
           </div>
           {perfError && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -258,19 +344,318 @@ export default function AdminRidersPage() {
             <table className="w-full min-w-[1100px] text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">الكود</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700 min-w-[160px]">الاسم</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700 min-w-[140px]">المشرف</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">المنطقة</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">الفترة</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700 whitespace-nowrap">أيام العمل</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">ساعات</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">بريك</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">تأخير</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">غياب</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">طلبات</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">قبول %</th>
-                  <th className="text-right py-3 px-3 font-semibold text-gray-700">مديونية</th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">الكود</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'code'}
+                        onOpen={() => setPerfOpenMenu('code')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="text"
+                        textFilter={perfFilters.code}
+                        onTextChange={(f: TextFilterState) => setPerfFilters((p) => ({ ...p, code: f }))}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'code', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'code', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('code')}
+                        ariaLabel="فلتر وفرز كود المندوب"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 min-w-[160px] align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">الاسم</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'name'}
+                        onOpen={() => setPerfOpenMenu('name')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="text"
+                        textFilter={perfFilters.name}
+                        onTextChange={(f: TextFilterState) => setPerfFilters((p) => ({ ...p, name: f }))}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'name', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'name', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('name')}
+                        ariaLabel="فلتر وفرز اسم المندوب"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 min-w-[140px] align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">المشرف</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'supervisor'}
+                        onOpen={() => setPerfOpenMenu('supervisor')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="text"
+                        textFilter={perfFilters.supervisor}
+                        onTextChange={(f: TextFilterState) => setPerfFilters((p) => ({ ...p, supervisor: f }))}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'supervisor', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'supervisor', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('supervisor')}
+                        ariaLabel="فلتر وفرز المشرف"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">المنطقة</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'region'}
+                        onOpen={() => setPerfOpenMenu('region')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="text"
+                        textFilter={perfFilters.region}
+                        onTextChange={(f: TextFilterState) => setPerfFilters((p) => ({ ...p, region: f }))}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'region', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'region', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('region')}
+                        ariaLabel="فلتر وفرز المنطقة"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">الفترة</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'date'}
+                        onOpen={() => setPerfOpenMenu('date')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="text"
+                        textFilter={perfFilters.date}
+                        onTextChange={(f: TextFilterState) => setPerfFilters((p) => ({ ...p, date: f }))}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'date', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'date', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('date')}
+                        ariaLabel="فلتر وفرز الفترة"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 whitespace-nowrap align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">أيام العمل</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'workDays'}
+                        onOpen={() => setPerfOpenMenu('workDays')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="number"
+                        numFilter={perfFilters.workDays}
+                        onNumChange={(f: NumFilterState) => setPerfNumFilter('workDays', f)}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'workDays', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'workDays', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('workDays')}
+                        ariaLabel="فلتر وفرز أيام العمل"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">ساعات</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'hours'}
+                        onOpen={() => setPerfOpenMenu('hours')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="number"
+                        numFilter={perfFilters.hours}
+                        onNumChange={(f: NumFilterState) => setPerfNumFilter('hours', f)}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'hours', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'hours', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('hours')}
+                        ariaLabel="فلتر وفرز الساعات"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">بريك</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'break'}
+                        onOpen={() => setPerfOpenMenu('break')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="number"
+                        numFilter={perfFilters.break}
+                        onNumChange={(f: NumFilterState) => setPerfNumFilter('break', f)}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'break', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'break', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('break')}
+                        ariaLabel="فلتر وفرز البريك"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">تأخير</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'delay'}
+                        onOpen={() => setPerfOpenMenu('delay')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="number"
+                        numFilter={perfFilters.delay}
+                        onNumChange={(f: NumFilterState) => setPerfNumFilter('delay', f)}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'delay', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'delay', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('delay')}
+                        ariaLabel="فلتر وفرز التأخير"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">غياب</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'absence'}
+                        onOpen={() => setPerfOpenMenu('absence')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="absence"
+                        absenceFilter={perfFilters.absence}
+                        onAbsenceChange={(f: AbsenceFilterState) => setPerfFilters((p) => ({ ...p, absence: f }))}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'absence', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'absence', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('absence')}
+                        ariaLabel="فلتر وفرز الغياب"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">طلبات</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'orders'}
+                        onOpen={() => setPerfOpenMenu('orders')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="number"
+                        numFilter={perfFilters.orders}
+                        onNumChange={(f: NumFilterState) => setPerfNumFilter('orders', f)}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'orders', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'orders', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('orders')}
+                        ariaLabel="فلتر وفرز الطلبات"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">قبول %</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'acceptance'}
+                        onOpen={() => setPerfOpenMenu('acceptance')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="number"
+                        numFilter={perfFilters.acceptance}
+                        onNumChange={(f: NumFilterState) => setPerfNumFilter('acceptance', f)}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'acceptance', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'acceptance', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('acceptance')}
+                        ariaLabel="فلتر وفرز القبول"
+                      />
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 font-semibold text-gray-700 align-bottom">
+                    <div className="flex items-end justify-end gap-1.5">
+                      <span className="pb-0.5">مديونية</span>
+                      <RidersExcelColumnMenu
+                        isOpen={perfOpenMenu === 'debt'}
+                        onOpen={() => setPerfOpenMenu('debt')}
+                        onClose={() => setPerfOpenMenu(null)}
+                        variant="number"
+                        numFilter={perfFilters.debt}
+                        onNumChange={(f: NumFilterState) => setPerfNumFilter('debt', f)}
+                        onSortAsc={() => {
+                          setPerfSort({ col: 'debt', dir: 'asc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onSortDesc={() => {
+                          setPerfSort({ col: 'debt', dir: 'desc' });
+                          setPerfOpenMenu(null);
+                        }}
+                        onClearSort={() => setPerfSort({ col: null, dir: 'asc' })}
+                        sortDirection={perfSortDirFor('debt')}
+                        ariaLabel="فلتر وفرز المديونية"
+                      />
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -280,14 +665,14 @@ export default function AdminRidersPage() {
                       جاري تحميل الأداء...
                     </td>
                   </tr>
-                ) : perfRows.length === 0 ? (
+                ) : filteredPerfRows.length === 0 ? (
                   <tr>
                     <td colSpan={13} className="py-10 text-center text-gray-500">
-                      لا توجد بيانات في هذه الفترة
+                      لا توجد بيانات مطابقة للفلاتر في هذه الفترة
                     </td>
                   </tr>
                 ) : (
-                  perfRows.map((r, i) => (
+                  filteredPerfRows.map((r, i) => (
                     <tr key={`perf-${r.code}-${i}`} className="hover:bg-gray-50">
                       <td className="py-2 px-3 text-gray-800">{r.code}</td>
                       <td className="py-2 px-3 text-gray-800 font-medium break-words">{r.name}</td>
